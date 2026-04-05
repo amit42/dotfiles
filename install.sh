@@ -7,6 +7,17 @@
 
 set -e  # stop on any error
 
+# ── CRLF safety ───────────────────────────────────────────
+# Strip carriage returns from all shell/config files in this repo.
+# Prevents "bad interpreter: No such file or directory" on WSL/Linux
+# when files were touched on Windows and got CRLF line endings.
+# .gitattributes enforces LF going forward — this is a one-time fix.
+find "$(dirname "${BASH_SOURCE[0]}")" \
+  \( -name "*.sh" -o -name "*.zsh" -o -name "zshrc" \
+     -o -name "tmux.conf" -o -name "*.lua" -o -name "*.toml" \) \
+  -not -path "*/.git/*" \
+  -exec sed -i 's/\r//' {} \;
+
 # ── Colors for output ──────────────────────────────────────
 RED='\033[0;31m'
 GREEN='\033[0;32m'

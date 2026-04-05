@@ -1,0 +1,50 @@
+# ╔═══════════════════════════════════════════════════════╗
+# ║  .gitattributes                                      ║
+# ║  Enforces LF line endings on all platforms.          ║
+# ║  Prevents CRLF from breaking scripts on WSL/Linux.   ║
+# ╚═══════════════════════════════════════════════════════╝
+
+# Default — all text files get LF on checkout everywhere
+* text=auto eol=lf
+
+# Shell scripts — must always be LF, never CRLF
+*.sh        text eol=lf
+*.zsh       text eol=lf
+*.bash      text eol=lf
+*.env       text eol=lf
+
+# Config files
+*.conf      text eol=lf
+*.toml      text eol=lf
+*.yaml      text eol=lf
+*.yml       text eol=lf
+*.json      text eol=lf
+*.ini       text eol=lf
+
+# Editor / tool configs
+*.lua       text eol=lf
+*.vim       text eol=lf
+*.md        text eol=lf
+*.txt       text eol=lf
+Makefile    text eol=lf
+*.mk        text eol=lf
+
+# Explicitly named files (no extension)
+zshrc       text eol=lf
+tmux.conf   text eol=lf
+.gitconfig  text eol=lf
+.editorconfig text eol=lf
+
+# Binary files — no line ending conversion
+*.png       binary
+*.jpg       binary
+*.jpeg      binary
+*.gif       binary
+*.ico       binary
+*.ttf       binary
+*.otf       binary
+*.woff      binary
+*.woff2     binary
+*.zip       binary
+*.tar       binary
+*.gz        binary

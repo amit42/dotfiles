@@ -5,8 +5,11 @@ Designed for backend, embedded, and DevOps development.
 Bootstraps itself on any machine — one command, everything installs.
 
 ```bash
-bash install.sh
+sh run.sh
 ```
+
+> Use `sh run.sh` not `bash install.sh` — `run.sh` strips CRLF from
+> `install.sh` before executing it, preventing "bad interpreter" errors on WSL.
 
 Supports **macOS**, **Linux**, and **WSL**.
 
@@ -35,8 +38,8 @@ Supports **macOS**, **Linux**, and **WSL**.
 git clone <your-repo-url> ~/dotfiles
 cd ~/dotfiles/dotfiles
 
-# 2. Run the installer
-bash install.sh
+# 2. Run the installer (sh tolerates CRLF, strips install.sh first)
+sh run.sh
 
 # 3. Reload shell
 source ~/.zshrc
