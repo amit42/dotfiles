@@ -7,16 +7,6 @@
 
 set -e  # stop on any error
 
-# ── CRLF safety ───────────────────────────────────────────
-# Strip carriage returns from all shell/config files in this repo.
-# Prevents "bad interpreter: No such file or directory" on WSL/Linux
-# when files were touched on Windows and got CRLF line endings.
-# .gitattributes enforces LF going forward — this is a one-time fix.
-find "$(dirname "${BASH_SOURCE[0]}")" \
-  \( -name "*.sh" -o -name "*.zsh" -o -name "zshrc" \
-     -o -name "tmux.conf" -o -name "*.lua" -o -name "*.toml" \) \
-  -not -path "*/.git/*" \
-  -exec sed -i 's/\r//' {} \;
 
 # ── Colors for output ──────────────────────────────────────
 RED='\033[0;31m'
@@ -139,14 +129,14 @@ elif [[ "$OS" == "linux" ]] || [[ "$OS" == "wsl" ]]; then
   install_apt_pkg lnav lnav
   if ! check_cmd starship; then
     log "Installing starship..."
-    curl -sS https://starship.rs/install.sh | sh -s -- --yes
+    curl -sSk https://starship.rs/install.sh | sh -s -- --yes
     success "Installed starship"
   else
     warn "starship already installed — skipping"
   fi
   if ! check_cmd zoxide; then
     log "Installing zoxide..."
-    curl -sS https://raw.githubusercontent.com/ajeetdsouza/zoxide/main/install.sh | bash
+    curl -sSk https://raw.githubusercontent.com/ajeetdsouza/zoxide/main/install.sh | bash
     success "Installed zoxide"
   else
     warn "zoxide already installed — skipping"
