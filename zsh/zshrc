@@ -1,0 +1,544 @@
+# ╔═══════════════════════════════════════════════════════╗
+# ║  zshrc — managed via dotfiles                        ║
+# ║  Edit: dotfiles/zsh/zshrc                            ║
+# ║  Install: bash install.sh                            ║
+# ╚═══════════════════════════════════════════════════════╝
+#
+# TOOL MAP (everything this file uses):
+#   zinit       — plugin manager, self-bootstraps on first run
+#   starship    — prompt (config: dotfiles/zsh/starship.toml)
+#   fzf         — fuzzy finder (Ctrl+T files, Ctrl+R history, Alt+C cd)
+#   fzf-tab     — replaces tab completion with fzf picker
+#   eza         — modern ls with icons and git status
+#   bat         — cat with syntax highlighting
+#   delta       — beautiful git diffs (configured in git config)
+#   lazygit     — full TUI git client (alias: lg)
+#   zoxide      — smart cd that learns your dirs (alias: cd)
+#   fd          — fast find replacement
+#   rg          — fast grep replacement (ripgrep)
+#   btop        — beautiful system monitor (alias: top)
+#   tldr        — practical quick man pages
+#   atuin       — shell history sync + fzf search (replaces Ctrl+R)
+#   direnv      — per-directory env vars via .envrc files
+#   thefuck     — corrects your last command (alias: fuck)
+#   tmux        — terminal multiplexer, auto-attach on start
+
+# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+# ZINIT BOOTSTRAP
+# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+# Self-installs on first run — only needs git. No curl, no
+# manual step. On subsequent runs just sources the loader.
+ZINIT_HOME="${XDG_DATA_HOME:-${HOME}/.local/share}/zinit/zinit.git"
+if [[ ! -d "$ZINIT_HOME" ]]; then
+  print -P "%F{yellow}→ Installing zinit...%f"
+  mkdir -p "$(dirname "$ZINIT_HOME")"
+  git clone https://github.com/zdharma-continuum/zinit.git "$ZINIT_HOME" || {
+    print -P "%F{red}✗ zinit clone failed — check network/git and re-open terminal%f"
+    return 1
+  }
+fi
+if [[ ! -f "${ZINIT_HOME}/zinit.zsh" ]]; then
+  print -P "%F{red}✗ zinit.zsh missing — remove $ZINIT_HOME and re-open terminal%f"
+  return 1
+fi
+source "${ZINIT_HOME}/zinit.zsh"
+
+# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+# PLUGINS
+# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+# Load order matters:
+#   fzf-tab   — must come before autosuggestions/highlighting
+#               replaces the default tab menu with a fzf picker
+#   autosuggestions — ghost-text suggestions from history
+#   completions     — extra completion definitions
+#   fast-syntax-highlighting — real-time command coloring
+#
+# `wait lucid` = lazy-load after prompt paint — keeps startup fast.
+zinit wait lucid light-mode for \
+  Aloxaf/fzf-tab \
+  zsh-users/zsh-autosuggestions \
+  zsh-users/zsh-completions \
+  zdharma-continuum/fast-syntax-highlighting
+
+# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+# COMPLETIONS
+# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+autoload -Uz compinit
+compinit
+zinit cdreplay -q   # replay completion fixes registered by plugins
+
+# fzf-tab: show file previews when completing paths
+zstyle ':fzf-tab:complete:cd:*' fzf-preview 'eza --tree --level=1 --icons $realpath 2>/dev/null'
+zstyle ':fzf-tab:complete:*' fzf-preview 'bat --color=always --line-range=:50 $realpath 2>/dev/null || eza --tree --level=1 --icons $realpath 2>/dev/null'
+
+# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+# ENVIRONMENT
+# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+export EDITOR="nvim"
+export VISUAL="nvim"
+export MANPAGER="sh -c 'col -bx | bat -l man -p'"  # man pages with syntax highlighting via bat
+
+export HISTSIZE=100000
+export SAVEHIST=100000
+setopt HIST_IGNORE_DUPS    # skip exact duplicate of the previous command
+setopt HIST_IGNORE_ALL_DUPS # remove older duplicate entries from history
+setopt HIST_IGNORE_SPACE   # don't save commands that start with a space
+setopt HIST_VERIFY         # show expanded history before executing
+setopt SHARE_HISTORY       # share history across all open terminals instantly
+
+setopt AUTO_CD             # type a dir name without cd to enter it
+setopt CORRECT             # suggest corrections for mistyped commands
+
+# Word boundaries — / and . treated as separators so Ctrl+W and
+# Ctrl+Left/Right stop at path components, not just spaces.
+WORDCHARS='*?_-.[]~=&;!#$%^(){}<>'
+
+# Ctrl+Left / Ctrl+Right — jump by word
+bindkey "^[[1;5C" forward-word
+bindkey "^[[1;5D" backward-word
+
+# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+# MODERN TOOL REPLACEMENTS
+# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+# Each block is guarded — falls back gracefully if tool not installed.
+
+# bat — cat with syntax highlighting, line numbers, git markers
+# --paging=never means it behaves like cat (no less pager) by default
+if command -v bat &>/dev/null; then
+  alias cat='bat --paging=never'
+  alias catp='bat'                 # catp = cat with paging (for large files)
+fi
+
+# eza — ls replacement with icons, git status, tree view
+if command -v eza &>/dev/null; then
+  alias ls='eza --icons'
+  alias ll='eza -lh --icons --git'
+  alias la='eza -lah --icons --git'
+  alias lt='eza --tree --icons --level=2'
+else
+  alias ls='ls --color=auto'
+  alias ll='ls -lh --color=auto'
+  alias la='ls -lah --color=auto'
+fi
+
+# rg — ripgrep, grep replacement (respects .gitignore, faster)
+command -v rg &>/dev/null && alias grep='rg'
+
+# fd — find replacement (simpler syntax, respects .gitignore)
+command -v fd &>/dev/null && alias find='fd'
+
+# btop — visual system monitor with CPU, mem, net, disk graphs
+command -v btop &>/dev/null && alias top='btop'
+
+# tldr — practical quick-reference man pages
+# Usage: tldr tar   →  shows the 5 commands you actually use
+command -v tldr &>/dev/null && alias help='tldr'
+
+# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+# ALIASES: NAVIGATION
+# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+alias ..='cd ..'
+alias ...='cd ../..'
+alias ~='cd ~'
+alias -- -='cd -'          # return to previous directory
+
+# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+# ALIASES: EDITOR
+# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+alias v='nvim'
+alias vi='nvim'
+alias vim='nvim'
+
+# Safer defaults — always prompt before overwriting/deleting
+alias cp='cp -iv'
+alias mv='mv -iv'
+alias rm='rm -iv'
+
+# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+# ALIASES: GIT
+# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+# lazygit — full TUI: stage hunks, interactive rebase, branch mgmt
+# Open with: lg
+alias lg='lazygit'
+
+alias gs='git status -sb'                               # short status with branch
+alias ga='git add'
+alias gaa='git add -A'
+alias gc='git commit -m'
+alias gca='git commit --amend --no-edit'                # amend last commit, keep message
+alias gp='git push'
+alias gpf='git push --force-with-lease'                 # safe force push
+alias gl='git pull'
+alias gco='git checkout'
+alias gcb='git checkout -b'
+alias gb='git branch -vv'                               # branches with tracking info
+alias glog='git log --oneline --graph --decorate --all' # visual branch graph
+alias gd='git diff'                                     # uses delta if configured
+alias gds='git diff --staged'
+alias gst='git stash'
+alias gstp='git stash pop'
+alias grbi='git rebase -i'
+alias gundo='git reset HEAD~1 --mixed'                  # undo last commit, keep changes staged
+alias gnuke='git reset --hard && git clean -fd'         # ⚠ destroy all local changes
+alias groot='cd $(git rev-parse --show-toplevel)'       # jump to repo root
+
+# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+# ALIASES: DOCKER
+# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+alias d='docker'
+alias dps='docker ps'
+alias dpsa='docker ps -a'
+alias dex='docker exec -it'
+alias dlog='docker logs -f'
+alias dstop='docker stop $(docker ps -q)'              # stop all running containers
+alias dclean='docker system prune -af'                 # ⚠ remove all unused images/containers
+alias dc='docker compose'
+alias dcu='docker compose up'
+alias dcud='docker compose up -d'                      # detached
+alias dcd='docker compose down'
+alias dcr='docker compose restart'
+alias dcl='docker compose logs -f'
+alias dcb='docker compose build'
+
+# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+# ALIASES: KUBERNETES
+# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+alias k='kubectl'
+alias kgp='kubectl get pods'
+alias kgpa='kubectl get pods -A'                       # all namespaces
+alias kgs='kubectl get services'
+alias kgn='kubectl get nodes'
+alias kd='kubectl describe'
+alias kdp='kubectl describe pod'
+alias klog='kubectl logs -f'
+alias kex='kubectl exec -it'
+alias kctx='kubectl config use-context'                # switch cluster
+alias kns='kubectl config set-context --current --namespace' # switch namespace
+alias kaf='kubectl apply -f'
+alias kdf='kubectl delete -f'
+ksh()   { kubectl exec -it "$1" -- sh; }               # shell into pod (sh)
+kbash() { kubectl exec -it "$1" -- bash; }             # shell into pod (bash)
+
+# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+# ALIASES: AWS
+# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+alias awsid='aws sts get-caller-identity'              # who am I?
+awsp()   { export AWS_PROFILE="$1"; echo "AWS_PROFILE → $1"; }  # switch profile
+alias s3ls='aws s3 ls'
+ssm()    { aws ssm start-session --target "$1"; }      # SSM session to EC2 instance ID
+cwlogs() { aws logs tail "$1" --follow; }              # tail a CloudWatch log group
+
+# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+# ALIASES: EMBEDDED / C
+# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+alias armcc='arm-none-eabi-gcc'
+alias armobjdump='arm-none-eabi-objdump -d'
+alias armsize='arm-none-eabi-size'
+alias armgdb='arm-none-eabi-gdb'
+alias serial='picocom -b 115200 /dev/ttyUSB0'          # USB serial console
+alias serial1='picocom -b 115200 /dev/ttyUSB1'
+alias qemu-arm='qemu-system-arm'
+alias m='make'
+alias mc='make clean'
+alias mf='make flash'
+alias mb='make build'
+alias mr='make run'
+disasm() { objdump -d "$1" | less; }                   # disassemble a binary
+
+# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+# ALIASES: PYTHON
+# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+alias py='python3'
+alias pip='pip3'
+alias venv='python3 -m venv .venv'                     # create venv in current dir
+alias va='source .venv/bin/activate'                   # activate venv
+alias vd='deactivate'                                  # deactivate venv
+mkvenv() { python3 -m venv .venv && source .venv/bin/activate; }  # create + activate
+
+# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+# ALIASES: GO
+# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+alias gob='go build ./...'
+alias gor='go run .'
+alias got='go test ./...'
+alias gotv='go test -v ./...'
+alias gomod='go mod tidy'
+alias govet='go vet ./...'
+alias golint='golangci-lint run'
+
+# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+# ALIASES: NODE
+# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+alias ni='npm install'
+alias nid='npm install --save-dev'
+alias nr='npm run'
+alias ns='npm start'
+alias nt='npm test'
+alias nb='npm run build'
+
+# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+# ALIASES: RUST
+# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+alias cb='cargo build'
+alias cr='cargo run'
+alias ct='cargo test'
+alias ccheck='cargo check'                             # fast type-check without building
+alias cclippy='cargo clippy'                           # linter with smart suggestions
+alias cfmt='cargo fmt'
+alias cbr='cargo build --release'
+alias crr='cargo run --release'
+alias cwatch='cargo watch -x run'                      # rebuild + rerun on file change
+
+# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+# FZF
+# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+# Shell keybindings (loaded from fzf's own install):
+#   Ctrl+T — fuzzy insert file path at cursor
+#   Ctrl+R — fuzzy search history (overridden by atuin if installed)
+#   Alt+C  — fuzzy cd into a directory
+[[ -f ~/.fzf.zsh ]] && source ~/.fzf.zsh
+[[ -f /opt/homebrew/opt/fzf/shell/key-bindings.zsh ]] && \
+  source /opt/homebrew/opt/fzf/shell/key-bindings.zsh
+
+# Catppuccin Mocha theme
+export FZF_DEFAULT_OPTS="
+  --color=bg+:#313244,bg:#1e1e2e,spinner:#f5e0dc,hl:#f38ba8
+  --color=fg:#cdd6f4,header:#f38ba8,info:#cba6f7,pointer:#f5e0dc
+  --color=marker:#b4befe,fg+:#cdd6f4,prompt:#cba6f7,hl+:#f38ba8
+  --border rounded --prompt '❯ ' --pointer '▶' --marker '✔'
+  --height 50% --layout reverse
+"
+# Use fd for file search — respects .gitignore, shows hidden files
+export FZF_DEFAULT_COMMAND='fd --type f --hidden --follow --exclude .git'
+export FZF_CTRL_T_COMMAND="$FZF_DEFAULT_COMMAND"
+export FZF_ALT_C_COMMAND='fd --type d --hidden --follow --exclude .git'
+
+# Fuzzy git log browser — preview full diff for each commit
+# Usage: fglog → pick commit → prints SHA (pipe or use interactively)
+fglog() {
+  git log --oneline --color=always | \
+    fzf --ansi --preview 'git show --color=always {1}' \
+        --preview-window=right:60% | \
+    awk '{print $1}'
+}
+
+# Fuzzy cd — jump into any subdirectory from current location
+# Usage: fcd → pick dir → cd into it
+fcd() {
+  local dir
+  dir=$(fd --type d --hidden --exclude .git | \
+    fzf --preview 'eza --tree --level=1 --icons {}') && cd "$dir"
+}
+
+# Fuzzy kill — list processes, pick one, kill -9 it
+# Usage: fkill → pick process → killed
+fkill() {
+  local pid
+  pid=$(ps aux | fzf --header='Select process to kill' | awk '{print $2}')
+  [[ -n "$pid" ]] && kill -9 "$pid" && echo "Killed $pid"
+}
+
+# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+# UTILITY FUNCTIONS
+# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+# mkdir + cd in one step
+# Usage: mkcd my-project
+mkcd() { mkdir -p "$1" && cd "$1"; }
+
+# Backup file with timestamp — non-destructive
+# Usage: backup config.yaml  →  config.yaml.bak.20260405_143000
+backup() { cp "$1" "${1}.bak.$(date +%Y%m%d_%H%M%S)"; }
+
+# Universal archive extractor — handles any format
+# Usage: extract archive.tar.gz
+extract() {
+  case "$1" in
+    *.tar.bz2) tar xjf "$1"   ;;
+    *.tar.gz)  tar xzf "$1"   ;;
+    *.tar.xz)  tar xJf "$1"   ;;
+    *.tar)     tar xf  "$1"   ;;
+    *.bz2)     bunzip2 "$1"   ;;
+    *.gz)      gunzip  "$1"   ;;
+    *.zip)     unzip   "$1"   ;;
+    *.7z)      7z x    "$1"   ;;
+    *.rar)     unrar x "$1"   ;;
+    *)         echo "Unknown archive format: $1" ;;
+  esac
+}
+
+# Show which process is using a port
+# Usage: whichport 8080
+whichport() { lsof -i ":$1"; }
+
+# Pretty-print JSON in nvim with syntax highlighting
+# Usage: json '{"key": "value"}'  or  curl ... | json
+json() {
+  if [[ -t 0 ]]; then
+    echo "$1" | python3 -m json.tool | nvim -c 'set ft=json' -
+  else
+    python3 -m json.tool | nvim -c 'set ft=json' -
+  fi
+}
+
+# Spin up a quick HTTP server in the current directory
+# Usage: serve        →  http://localhost:8000
+#        serve 3000   →  http://localhost:3000
+serve() { python3 -m http.server "${1:-8000}"; }
+
+# Weather in terminal
+# Usage: weather          →  local weather
+#        weather London   →  weather for London
+weather() { curl "wttr.in/${1:-}"; }
+
+# Compile and run a single C file (no Makefile needed)
+# Usage: crun main.c
+crun() { gcc -o /tmp/crun "$1" && /tmp/crun; }
+
+# Print sizeof a C type — useful for embedded work
+# Usage: csizeof uint32_t
+csizeof() {
+  printf '#include <stdio.h>\n#include <stdint.h>\nint main(){printf("%%zu\\n",sizeof(%s));}' "$1" \
+    | gcc -x c - -o /tmp/csizeof && /tmp/csizeof
+}
+
+# Show the 20 largest files under current directory
+bigfiles() { du -ah . | sort -rh | head -20; }
+
+# git clone + immediately cd into the repo
+# Usage: gclone https://github.com/user/repo
+gclone() { git clone "$1" && cd "$(basename "$1" .git)"; }
+
+# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+# PROMPT POSITIONING
+# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+# Ctrl+L — push prompt to middle of terminal instead of full clear.
+# Previous output stays in scrollback (scroll up to see it).
+# Prompt lands at vertical center so you have breathing room.
+_prompt_to_middle() {
+  local half=$(( LINES / 2 ))
+  printf '\n%.0s' {1..$half}
+  zle reset-prompt
+}
+zle -N _prompt_to_middle
+bindkey '^L' _prompt_to_middle
+
+# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+# LOG VIEWING
+# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+# lnav — Log file Navigator. Auto-detects log format (syslog, nginx,
+# apache, json, journald) and renders with syntax highlighting.
+# Supports filtering, regex search, SQL queries, and multi-file tailing.
+# Only needs to be installed LOCALLY — remote server just runs tail -f.
+#
+# Local usage:
+#   log /var/log/nginx/access.log   →  open in lnav TUI
+#   log *.log                       →  tail multiple files together
+#   journalctl -f | lnav            →  live systemd journal
+#
+# lnav keybindings (inside TUI):
+#   /        →  regex search
+#   ;        →  SQL query mode (SELECT * FROM log WHERE ...)
+#   :filter-in <pattern>   →  only show matching lines
+#   :filter-out <pattern>  →  hide matching lines
+#   q        →  quit
+
+if command -v lnav &>/dev/null; then
+  alias log='lnav'
+else
+  # Fall back to bat syntax highlighting for local log files
+  alias log='bat --paging=never --language=log'
+fi
+
+# sshlog — tail a remote log file with local lnav rendering
+# The remote server only needs to run `tail -f`, no lnav needed there.
+# Usage: sshlog user@server /var/log/nginx/access.log
+#        sshlog prod-web /var/log/app/error.log
+sshlog() {
+  if [[ $# -lt 2 ]]; then
+    echo "Usage: sshlog <host> <logfile>"
+    return 1
+  fi
+  ssh "$1" "tail -f $2" | lnav
+}
+
+# sshcat — view a remote log file once (no follow) with bat highlighting
+# Useful for inspecting archived logs without a full TUI session.
+# Usage: sshcat user@server /var/log/syslog
+#        sshcat prod-db /var/log/postgresql/postgresql.log
+sshcat() {
+  if [[ $# -lt 2 ]]; then
+    echo "Usage: sshcat <host> <logfile>"
+    return 1
+  fi
+  ssh "$1" "cat $2" | bat --language=log
+}
+
+# sshj — tail remote systemd journal with lnav rendering
+# Usage: sshj user@server               →  all journal entries
+#        sshj user@server nginx         →  journal for specific unit
+sshj() {
+  if [[ $# -lt 1 ]]; then
+    echo "Usage: sshj <host> [unit]"
+    return 1
+  fi
+  local unit_filter=""
+  [[ -n "$2" ]] && unit_filter="-u $2"
+  ssh "$1" "journalctl -f $unit_filter" | lnav
+}
+
+# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+# ELITE TOOLS
+# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+# zoxide — smarter cd that learns your most-visited directories
+# After a few days of use, `z proj` jumps to ~/dev/my-project
+# `cd` is aliased to `z` so existing muscle memory still works
+if command -v zoxide &>/dev/null; then
+  eval "$(zoxide init zsh)"
+  alias cd='z'
+fi
+
+# direnv — loads/unloads env vars when you enter/leave a directory
+# Create a .envrc file in any project: echo 'export API_KEY=...' > .envrc
+# then `direnv allow` — vars load on cd in, unload on cd out
+if command -v direnv &>/dev/null; then
+  eval "$(direnv hook zsh)"
+fi
+
+# thefuck — press Esc twice to correct your last command
+# e.g. `got test` → suggest `go test`
+if command -v thefuck &>/dev/null; then
+  eval "$(thefuck --alias)"
+fi
+
+# atuin — replaces Ctrl+R with a beautiful searchable history
+# Syncs history across machines if you set up an atuin account
+# Ctrl+R → full-screen history search with timestamps and exit codes
+if command -v atuin &>/dev/null; then
+  eval "$(atuin init zsh)"
+fi
+
+# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+# AUTO TMUX
+# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+# On every new terminal: attach to session 'main' or create it.
+# Skipped if:
+#   - already inside tmux ($TMUX is set)
+#   - non-interactive shell (scripts, CI)
+#   - stdin is not a terminal
+if command -v tmux &>/dev/null && [[ -z "$TMUX" ]] && [[ -t 0 ]]; then
+  tmux attach -t main 2>/dev/null || tmux new-session -s main
+fi
+
+# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+# STARSHIP PROMPT
+# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+# Config: dotfiles/zsh/starship.toml → deployed to ~/.config/starship.toml
+# To change prompt: edit starship.toml, run bash install.sh, open new terminal.
+# Docs: https://starship.rs/config/
+if command -v starship &>/dev/null; then
+  eval "$(starship init zsh)"
+else
+  print -P "%F{yellow}⚠ starship not found — run: brew install starship%f"
+fi

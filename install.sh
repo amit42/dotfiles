@@ -76,6 +76,103 @@ check_cmd() {
   command -v "$1" &>/dev/null
 }
 
+# ══════════════════════════════════════════════════════════
+# TOOLS
+# ══════════════════════════════════════════════════════════
+echo ""
+echo "── Tools ─────────────────────────────────────────────"
+
+install_brew_pkg() {
+  if check_cmd "$1"; then
+    warn "$1 already installed — skipping"
+  else
+    log "Installing $1..."
+    brew install "$1" && success "Installed $1"
+  fi
+}
+
+install_apt_pkg() {
+  if check_cmd "$1"; then
+    warn "$1 already installed — skipping"
+  else
+    log "Installing $1..."
+    sudo apt-get install -y "$2" && success "Installed $1"
+  fi
+}
+
+if [[ "$OS" == "mac" ]]; then
+  if check_cmd brew; then
+    install_brew_pkg fzf
+    install_brew_pkg fd
+    install_brew_pkg rg
+    install_brew_pkg zoxide
+    install_brew_pkg eza
+    install_brew_pkg starship
+    install_brew_pkg direnv
+    install_brew_pkg atuin
+    install_brew_pkg thefuck
+    install_brew_pkg bat
+    install_brew_pkg delta
+    install_brew_pkg lazygit
+    install_brew_pkg btop
+    install_brew_pkg tldr
+    install_brew_pkg lnav
+  else
+    warn "Homebrew not found — skipping tool installs"
+    warn "Install Homebrew from https://brew.sh then re-run"
+  fi
+elif [[ "$OS" == "linux" ]] || [[ "$OS" == "wsl" ]]; then
+  install_apt_pkg fzf fzf
+  install_apt_pkg fd fd-find
+  install_apt_pkg rg ripgrep
+  install_apt_pkg lnav lnav
+  if ! check_cmd starship; then
+    log "Installing starship..."
+    curl -sS https://starship.rs/install.sh | sh -s -- --yes
+    success "Installed starship"
+  else
+    warn "starship already installed — skipping"
+  fi
+  if ! check_cmd zoxide; then
+    log "Installing zoxide..."
+    curl -sS https://raw.githubusercontent.com/ajeetdsouza/zoxide/main/install.sh | bash
+    success "Installed zoxide"
+  else
+    warn "zoxide already installed — skipping"
+  fi
+  if ! check_cmd eza; then
+    if check_cmd cargo; then
+      log "Installing eza via cargo..."
+      cargo install eza && success "Installed eza"
+    else
+      warn "eza not installed — install cargo (rustup) then: cargo install eza"
+    fi
+  else
+    warn "eza already installed — skipping"
+  fi
+fi
+
+echo ""
+echo "── Git (delta) ───────────────────────────────────────"
+# delta — beautiful diffs with syntax highlighting and side-by-side view
+# Configured as git's pager so `git diff`, `git show`, `git log -p` all use it
+if check_cmd delta; then
+  git config --global core.pager delta
+  git config --global interactive.diffFilter "delta --color-only"
+  git config --global delta.navigate true        # n/N to jump between diff sections
+  git config --global delta.side-by-side true    # two-column diff view
+  git config --global delta.line-numbers true
+  git config --global delta.syntax-theme "Catppuccin Mocha"
+  git config --global merge.conflictstyle diff3
+  git config --global diff.colorMoved default
+  success "Configured delta as git pager"
+else
+  warn "delta not installed — skipping git pager config"
+fi
+
+echo ""
+echo "── Nvim ──────────────────────────────────────────────"
+
 if check_cmd nvim; then
   # Copy our entire nvim/ folder to ~/.config/nvim
   # nvim always looks here — no extra source line needed
@@ -92,13 +189,13 @@ echo ""
 echo "── Zsh ───────────────────────────────────────────────"
 
 if check_cmd zsh; then
-  # Copy our zshrc to ~/.config/zsh/zshrc
-  # This is NOT where zsh auto-reads — but it's clean and standard
   safe_copy "$DOTFILES/zsh/zshrc" "$CONFIG/zsh/zshrc"
 
-  # Add ONE source line to ~/.zshrc
-  # ~/.zshrc is what zsh reads by default on every shell start
-  # We don't rewrite it — just tell it to load our config
+  # starship config — starship reads ~/.config/starship.toml automatically
+  if [[ -f "$DOTFILES/zsh/starship.toml" ]]; then
+    safe_copy "$DOTFILES/zsh/starship.toml" "$CONFIG/starship.toml"
+  fi
+
   append_if_missing "$HOME/.zshrc" "source $CONFIG/zsh/zshrc"
 else
   warn "zsh not installed — skipping zsh config"
@@ -107,16 +204,52 @@ fi
 echo ""
 echo "── Tmux ──────────────────────────────────────────────"
 
-if check_cmd tmux; then
-  # Copy our tmux.conf to ~/.config/tmux/tmux.conf
-  safe_copy "$DOTFILES/tmux/tmux.conf" "$CONFIG/tmux/tmux.conf"
+# Install tmux if missing
+if ! check_cmd tmux; then
+  if [[ "$OS" == "mac" ]] && check_cmd brew; then
+    log "Installing tmux..."
+    brew install tmux && success "Installed tmux"
+  elif [[ "$OS" == "linux" ]] || [[ "$OS" == "wsl" ]]; then
+    log "Installing tmux..."
+    sudo apt-get install -y tmux && success "Installed tmux"
+  else
+    warn "tmux not found — install manually then re-run"
+  fi
+fi
 
-  # Add ONE source line to ~/.tmux.conf
-  # tmux reads ~/.tmux.conf by default
-  # We just point it to our actual config
+if check_cmd tmux; then
+  # TPM — tmux plugin manager, self-installs plugins on first tmux start
+  TPM_DIR="$HOME/.tmux/plugins/tpm"
+  if [[ ! -d "$TPM_DIR" ]]; then
+    log "Installing TPM (tmux plugin manager)..."
+    git clone https://github.com/tmux-plugins/tpm "$TPM_DIR" && success "Installed TPM"
+  else
+    warn "TPM already installed — skipping"
+  fi
+
+  safe_copy "$DOTFILES/tmux/tmux.conf" "$CONFIG/tmux/tmux.conf"
   append_if_missing "$HOME/.tmux.conf" "source $CONFIG/tmux/tmux.conf"
+
+  success "Tmux ready — open tmux and press Prefix+I to install plugins"
 else
   warn "tmux not installed — skipping tmux config"
+fi
+
+echo ""
+echo "── WezTerm ───────────────────────────────────────────"
+# WezTerm reads ~/.wezterm.lua on macOS/Linux
+# and %USERPROFILE%\.wezterm.lua on Windows
+WEZTERM_CONFIG="$HOME/.wezterm.lua"
+if [[ -f "$DOTFILES/wezterm/wezterm.lua" ]]; then
+  if [[ -f "$WEZTERM_CONFIG" ]]; then
+    warn "Backing up $WEZTERM_CONFIG → $WEZTERM_CONFIG.bak"
+    mv "$WEZTERM_CONFIG" "$WEZTERM_CONFIG.bak"
+  fi
+  cp "$DOTFILES/wezterm/wezterm.lua" "$WEZTERM_CONFIG"
+  success "Copied wezterm.lua → $WEZTERM_CONFIG"
+  warn "Requires JetBrainsMono Nerd Font — download from https://www.nerdfonts.com"
+else
+  warn "dotfiles/wezterm/wezterm.lua not found — skipping"
 fi
 
 # ══════════════════════════════════════════════════════════
@@ -126,13 +259,15 @@ echo ""
 echo "═══════════════════════════════════════════════════════"
 success "Install complete"
 echo ""
-echo "  Nvim   → $CONFIG/nvim"
-echo "  Zsh    → $CONFIG/zsh/zshrc"
-echo "  Tmux   → $CONFIG/tmux/tmux.conf"
+echo "  Nvim      → $CONFIG/nvim"
+echo "  Zsh       → $CONFIG/zsh/zshrc"
+echo "  Tmux      → $CONFIG/tmux/tmux.conf"
+echo "  Starship  → $CONFIG/starship.toml"
+echo "  WezTerm   → $HOME/.wezterm.lua"
 echo ""
-echo "  ~/.zshrc     sources our zsh config"
-echo "  ~/.tmux.conf sources our tmux config"
-echo ""
-echo "  Run: source ~/.zshrc"
+echo "  Next steps:"
+echo "  1. source ~/.zshrc"
+echo "  2. Open tmux → press Prefix+I to install plugins"
+echo "  3. Install JetBrainsMono Nerd Font on host machine"
 echo "═══════════════════════════════════════════════════════"
 
