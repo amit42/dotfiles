@@ -11,7 +11,7 @@ return {
     "--clang-tidy",                -- run clang-tidy checks inline as diagnostics
     "--header-insertion=iwyu",     -- suggest includes based on IWYU analysis
     "--completion-style=detailed", -- show full function signatures in completions
-    "--function-arg-placeholders", -- insert named placeholders for function args
+    "--function-arg-placeholders=1", -- insert named placeholders for function args
   },
   init_options = {
     usePlaceholders      = true,   -- snippet-style placeholders in completions

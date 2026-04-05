@@ -8,10 +8,10 @@ return {
     -- files, text, git commits, buffers, keymaps, etc
     {
       "nvim-telescope/telescope.nvim",
-      tag = "0.1.8",
+      tag = "v0.2.2",  -- latest stable; includes standalone treesitter implementation
       dependencies = {
         "nvim-lua/plenary.nvim",          -- utility functions, required by many plugins
-        "ahmedkhalf/project.nvim",        -- project detection, enables Telescope projects
+        "DrKJeff16/project.nvim",        -- project detection, enables Telescope projects
         "nvim-telescope/telescope-file-browser.nvim",  -- file browser picker
         "nvim-telescope/telescope-ui-select.nvim",    -- code actions in telescope dropdown
         {
@@ -139,14 +139,15 @@ return {
       config = function()
         require("nvim-autopairs").setup({
           check_ts = true,               -- use treesitter to check context
-                                         -- smarter about when to pair
           ts_config = {
-            lua  = { "string" },         -- don't pair in lua strings
+            lua  = { "string" },
             javascript = { "string", "template_string" },
           },
           fast_wrap = {
-            map = "<M-e>",               -- Alt+e to wrap selection in brackets
+            map = "<M-e>",
           },
+          map_cr = false,                -- cmp owns <CR> for completion confirm
+                                         -- autopairs pairs via on_confirm_done
         })
       end,
     },
@@ -334,13 +335,13 @@ return {
     -- Integrates with telescope via :Telescope projects (Space+p)
     -- Also changes cwd to the project root when you open a file inside one
     {
-      "ahmedkhalf/project.nvim",
+      "DrKJeff16/project.nvim",
       -- event = "VeryLazy" would be too late — needs to register roots before
       -- telescope picker is opened, so load immediately but it's very fast
       config = function()
-        require("project_nvim").setup({
-          -- Try LSP workspace root first, fall back to pattern search
-          detection_methods = { "lsp", "pattern" },
+        require("project").setup({
+          -- lsp.enabled=true tries LSP root first, falls back to pattern search
+          lsp      = { enabled = true },
           -- Root markers — add any build system files your projects use
           patterns = { ".git", "Makefile", "go.mod", "Cargo.toml", "package.json", "pyproject.toml" },
           -- Silently change cwd to project root when opening a file
@@ -392,5 +393,27 @@ return {
         })
       end,
     },
-  
+
+    -- ── Render Markdown ───────────────────────────────────────
+    -- Renders markdown in-buffer: headings, code blocks, tables, checkboxes
+    -- No browser needed — live preview inside nvim itself
+    -- Requires treesitter markdown parser (already in treesitter.lua)
+    {
+      "MeanderingProgrammer/render-markdown.nvim",
+      ft           = { "markdown" },
+      dependencies = { "nvim-treesitter/nvim-treesitter", "nvim-tree/nvim-web-devicons" },
+      opts = {
+        -- Heading levels get progressively indented and colored
+        heading = { enabled = true },
+        -- Code blocks get a background highlight and the language label
+        code = { enabled = true, style = "full" },
+        -- Render - [ ] and - [x] as unicode checkboxes
+        checkbox = { enabled = true },
+        -- Tables rendered with proper border characters
+        pipe_table = { enabled = true },
+        -- Bullet list markers replaced with unicode symbols
+        bullet = { enabled = true },
+      },
+    },
+
   }

@@ -8,6 +8,11 @@
 local cmp     = require("cmp")
 local luasnip = require("luasnip")
 
+-- After cmp confirms a completion, autopairs inserts the closing pair.
+-- e.g. selecting `printf` → `printf()` with cursor inside
+local cmp_autopairs = require("nvim-autopairs.completion.cmp")
+cmp.event:on("confirm_done", cmp_autopairs.on_confirm_done())
+
 -- ── Kind icons ───────────────────────────────────────────────
 -- One glyph per completion kind shown to the left of each item
 -- Requires a Nerd Font — https://www.nerdfonts.com/cheat-sheet
@@ -52,7 +57,7 @@ cmp.setup({
     -- Dismiss the menu without confirming
     ["<C-e>"] = cmp.mapping.abort(),
 
-    -- Confirm the selected item; select = false means you must actively pick
+    -- Confirm selected completion; plain newline if nothing is selected
     ["<CR>"] = cmp.mapping.confirm({ select = false }),
 
     -- Tab: move through completion list or jump through snippet placeholders

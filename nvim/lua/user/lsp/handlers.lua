@@ -111,11 +111,16 @@ M.setup = function()
   })
 
   -- Rounded borders on hover (K) and signature help (<leader>ls) popups
-  vim.lsp.handlers["textDocument/hover"] =
-    vim.lsp.with(vim.lsp.handlers.hover, { border = "rounded" })
+  -- vim.lsp.with() is deprecated in Neovim 0.11 — pass config as 4th arg instead
+  vim.lsp.handlers["textDocument/hover"] = function(err, result, ctx, config)
+    vim.lsp.handlers.hover(err, result, ctx,
+      vim.tbl_extend("force", { border = "rounded" }, config or {}))
+  end
 
-  vim.lsp.handlers["textDocument/signatureHelp"] =
-    vim.lsp.with(vim.lsp.handlers.signature_help, { border = "rounded" })
+  vim.lsp.handlers["textDocument/signatureHelp"] = function(err, result, ctx, config)
+    vim.lsp.handlers.signature_help(err, result, ctx,
+      vim.tbl_extend("force", { border = "rounded" }, config or {}))
+  end
 end
 
 return M

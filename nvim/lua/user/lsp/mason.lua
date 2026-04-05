@@ -1,12 +1,13 @@
 -- lsp/mason.lua
--- Installs language servers via mason and configures each with lspconfig
+-- Installs language servers via mason and configures each with the new
+-- vim.lsp.config API (lspconfig v3+, Neovim 0.11+)
 --
 -- Adding a new server (two steps):
 --   1. Add its mason-lspconfig name to the servers list below
 --   2. Optionally create lsp/settings/<servername>.lua returning a config table
 --      Mason auto-installs it. The loop auto-configures it.
 --
--- Server names must match mason-lspconfig's registry, not mason's:
+-- Server names must match mason-lspconfig's registry:
 --   https://github.com/williamboman/mason-lspconfig.nvim#available-lsp-servers
 
 local servers = {
@@ -34,58 +35,61 @@ require("mason").setup({
   },
 })
 
--- mason-lspconfig bridges mason and lspconfig
--- ensure_installed keeps servers present, automatic_installation catches new ones
+-- mason-lspconfig installs servers listed in ensure_installed
+-- automatic_installation picks up any server added later without a manual :MasonInstall
 require("mason-lspconfig").setup({
   ensure_installed       = servers,
   automatic_installation = true,
 })
 
 -- ── Tool installer ───────────────────────────────────────────
--- mason-tool-installer keeps formatters and linters installed automatically
--- so you don't have to manually :MasonInstall each one after cloning dotfiles
+-- Keeps formatters and linters installed automatically alongside LSP servers
+-- so a fresh clone works out of the box with no manual :MasonInstall calls
 -- Names here are mason's registry names (may differ from conform/nvim-lint names)
 require("mason-tool-installer").setup({
   ensure_installed = {
     -- Formatters
-    "stylua",            -- Lua
-    "black",             -- Python
-    "isort",             -- Python imports
-    "goimports",         -- Go (also adds missing imports)
-    "gofmt",             -- Go
-    "rustfmt",           -- Rust
+    "stylua",             -- Lua
+    "black",              -- Python
+    "isort",              -- Python imports
+    "goimports",          -- Go (also adds missing imports)
+    "gofmt",              -- Go
+    "rustfmt",            -- Rust
     "google-java-format", -- Java
-    "clang-format",      -- C / C++
-    "prettier",          -- JS, TS, JSON, YAML, Markdown
-    "shfmt",             -- Shell / Zsh
+    "clang-format",       -- C / C++
+    "prettier",           -- JS, TS, JSON, YAML, Markdown
+    "shfmt",              -- Shell / Zsh
 
     -- Linters
-    "ruff",              -- Python (replaces flake8, much faster)
-    "golangci-lint",     -- Go
-    "shellcheck",        -- Bash / Zsh
-    "hadolint",          -- Dockerfile
+    "ruff",               -- Python (faster flake8 replacement)
+    "golangci-lint",      -- Go
+    "shellcheck",         -- Bash / Zsh
+    "hadolint",           -- Dockerfile
   },
-  auto_update  = false,  -- don't silently update tools on every startup
-  run_on_start = true,   -- install missing tools when nvim starts
+  auto_update  = false, -- don't silently update tools on every startup
+  run_on_start = true,  -- install any missing tools when nvim starts
 })
 
--- ── Server setup loop ────────────────────────────────────────
--- Every server gets on_attach + capabilities from handlers.lua as a baseline.
--- If lsp/settings/<server>.lua exists its table is deep-merged on top.
-local lspconfig = require("lspconfig")
-local handlers  = require("user.lsp.handlers")
+-- ── Global LSP defaults ──────────────────────────────────────
+-- vim.lsp.config("*") sets a baseline applied to every server before
+-- per-server config is merged. Replaces the old lspconfig[server].setup() loop.
+local handlers = require("user.lsp.handlers")
 
+vim.lsp.config("*", {
+  on_attach    = handlers.on_attach,
+  capabilities = handlers.capabilities(),
+})
+
+-- ── Per-server settings ──────────────────────────────────────
+-- If lsp/settings/<server>.lua exists its table is merged on top of the global defaults
+-- pcall so a bad settings file doesn't break all other servers
 for _, server in ipairs(servers) do
-  local opts = {
-    on_attach    = handlers.on_attach,
-    capabilities = handlers.capabilities(),
-  }
-
-  -- pcall so a bad settings file doesn't break all servers
   local ok, overrides = pcall(require, "user.lsp.settings." .. server)
   if ok then
-    opts = vim.tbl_deep_extend("force", opts, overrides)
+    vim.lsp.config(server, overrides)
   end
-
-  lspconfig[server].setup(opts)
 end
+
+-- ── Enable ───────────────────────────────────────────────────
+-- Registers each server so neovim attaches it when the right filetype opens
+vim.lsp.enable(servers)
