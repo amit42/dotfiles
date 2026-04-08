@@ -4,30 +4,84 @@
 # ║  Install: bash install.sh                            ║
 # ╚═══════════════════════════════════════════════════════╝
 #
-# TOOL MAP (everything this file uses):
+# ── Startup profiling ────────────────────────────────────
+# To find out what's slow, start a shell with profiling on:
+#   ZSH_PROFILE=1 zsh
+# This prints a ranked breakdown of every function and how long
+# it took. The output appears when the shell opens.
+# zmodload must be the very first line to capture everything.
+[[ -n "$ZSH_PROFILE" ]] && zmodload zsh/zprof
+#
+# HOW THIS FILE IS STRUCTURED
+# ────────────────────────────────────────────────────────
+# Load order is intentional — do not reorder sections:
+#   1. Zinit bootstrap       — plugin manager must load first
+#   2. Plugins               — loaded async (wait lucid) to keep startup fast
+#   3. Completions           — must come after plugins register their completions
+#   4. Environment           — exports and setopts used everywhere
+#   5. Tool replacements     — alias modern tools over builtins
+#   6. Alias sections        — grouped by domain
+#   7. Functions / FZF       — interactive helpers
+#   8. Elite tools           — tools that hook into the shell (eval-based)
+#   9. Prompt (starship)     — must be last to not be overwritten
+#
+# TOOL MAP  (install: brew install <name> unless noted)
+# ────────────────────────────────────────────────────────
 #   zinit       — plugin manager, self-bootstraps on first run
 #   starship    — prompt (config: dotfiles/zsh/starship.toml)
-#   fzf         — fuzzy finder (Ctrl+T files, Ctrl+R history, Alt+C cd)
-#   fzf-tab     — replaces tab completion with fzf picker
-#   eza         — modern ls with icons and git status
-#   bat         — cat with syntax highlighting
-#   delta       — beautiful git diffs (configured in git config)
-#   lazygit     — full TUI git client (alias: lg)
-#   zoxide      — smart cd that learns your dirs (alias: cd)
-#   fd          — fast find replacement
-#   rg          — fast grep replacement (ripgrep)
-#   btop        — beautiful system monitor (alias: top)
-#   tldr        — practical quick man pages
-#   atuin       — shell history sync + fzf search (replaces Ctrl+R)
-#   direnv      — per-directory env vars via .envrc files
-#   thefuck     — corrects your last command (alias: fuck)
-#   tmux        — terminal multiplexer, auto-attach on start
+#   fzf         — fuzzy finder  Ctrl+T=files  Ctrl+R=history  Alt+C=cd
+#   fzf-tab     — replaces zsh tab menu with an fzf picker
+#   eza         — modern ls: icons, git-status, tree view
+#   bat         — cat with syntax highlighting and git markers
+#   delta       — beautiful git diffs  (configured in gitconfig, not here)
+#   lazygit     — full TUI git client  (alias: lg)
+#   zoxide      — smart cd that learns frequent dirs  (alias: cd)
+#   fd          — fast find replacement  (respects .gitignore)
+#   rg          — fast grep replacement  (ripgrep, respects .gitignore)
+#   btop        — visual system monitor: CPU / mem / net / disk  (alias: top)
+#   tldr        — practical quick-ref man pages  (alias: help)
+#   atuin       — searchable shell history with timestamps  (replaces Ctrl+R)
+#   direnv      — auto-loads .envrc on cd-in, unloads on cd-out
+#   thefuck     — corrects your last command  (Esc Esc)
+#   tmux        — terminal multiplexer
+#   gh          — GitHub CLI: PRs, issues, CI runs, Copilot
+#   k9s         — Kubernetes TUI  (alias: kk)
+#   kubectx     — fast cluster/namespace switcher  (aliases: kctx, kns)
+#   stern       — multi-pod Kubernetes log tailing  (alias: klogs-all)
+#   helm        — Kubernetes package manager
+#   uv          — fast Python package manager (replaces pip/venv/poetry)
+#                 install: curl -LsSf https://astral.sh/uv/install.sh | sh
+#   mise        — universal runtime version manager (node/python/go/ruby)
+#                 replaces: pyenv, nvm, goenv, rbenv
+#   yazi        — terminal file manager with cd-on-quit  (alias: ya)
+#   navi        — interactive cheatsheet with fzf  (Ctrl+G)
+#   jq          — JSON processor
+#   yq          — YAML / JSON / TOML processor
+#   hyperfine   — statistical command benchmarking  (alias: bench)
+#   tokei       — lines-of-code counter by language  (alias: cloc)
+#   just        — modern task runner / Makefile replacement  (alias: j)
+#   duf         — modern df: disk usage grouped by type  (alias: df)
+#   dust        — modern du: visual bar chart of disk usage  (alias: du)
+#   procs       — modern ps: color output and process tree  (alias: ps)
+#   xh          — modern HTTP client, httpie-compatible  (alias: http)
+#   glow        — render Markdown in the terminal  (alias: md)
+#   ouch        — universal archive tool, auto-detects format  (overrides extract)
+#   sd          — friendly sed replacement, no backslash hell  (alias: sdr)
+#   lnav        — log-file navigator with SQL query mode  (alias: log)
+#   brew        — Homebrew package manager helpers
+#   nmap        — port scanner  (used by portscan function)
+
 
 # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 # ZINIT BOOTSTRAP
 # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-# Self-installs on first run — only needs git. No curl, no
-# manual step. On subsequent runs just sources the loader.
+# zinit is the plugin manager used throughout this file.
+# It self-installs on first run — no curl, no manual step.
+# All it needs is git. On subsequent shells it just sources
+# the loader (~2ms). Plugins are lazy-loaded via `wait lucid`
+# so they never block prompt paint.
+#
+# If zinit gets corrupted: rm -rf ~/.local/share/zinit && reload.
 ZINIT_HOME="${XDG_DATA_HOME:-${HOME}/.local/share}/zinit/zinit.git"
 if [[ ! -d "$ZINIT_HOME" ]]; then
   print -P "%F{yellow}→ Installing zinit...%f"
@@ -43,264 +97,821 @@ if [[ ! -f "${ZINIT_HOME}/zinit.zsh" ]]; then
 fi
 source "${ZINIT_HOME}/zinit.zsh"
 
+
 # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 # PLUGINS
 # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-# Load order matters:
-#   fzf-tab   — must come before autosuggestions/highlighting
-#               replaces the default tab menu with a fzf picker
-#   autosuggestions — ghost-text suggestions from history
-#   completions     — extra completion definitions
-#   fast-syntax-highlighting — real-time command coloring
+# All plugins use `wait lucid` — they load asynchronously
+# AFTER the first prompt is painted, so shell startup is instant.
 #
-# `wait lucid` = lazy-load after prompt paint — keeps startup fast.
+# Load order within this block matters:
+#   fzf-tab                  — must load FIRST; hooks into zsh's
+#                              completion system before other plugins
+#                              register their handlers
+#   zsh-autosuggestions      — fish-style ghost-text from history;
+#                              appears right of cursor as you type
+#   zsh-completions          — 600+ extra completion definitions for
+#                              tools not in the zsh standard library
+#   fast-syntax-highlighting — real-time command coloring:
+#                              green=valid command, red=not found,
+#                              yellow=aliases, blue=builtins
+#   zsh-history-substring-search — Up/Down arrow history search
+#                              filtered by the text already typed
+#   zsh-you-should-use       — prints a reminder when you type a
+#                              command that has a defined alias
 zinit wait lucid light-mode for \
   Aloxaf/fzf-tab \
   zsh-users/zsh-autosuggestions \
   zsh-users/zsh-completions \
-  zdharma-continuum/fast-syntax-highlighting
+  zdharma-continuum/fast-syntax-highlighting \
+  zsh-users/zsh-history-substring-search \
+  MichaelAquilina/zsh-you-should-use
+
+# zsh-autosuggestions tuning
+# BUFFER_MAX_SIZE: stop suggesting when line is longer than 20 chars
+# — prevents lag when pasting multi-line content or editing long commands.
+# STRATEGY: try history first (exact match), fall back to completion engine
+# if no history entry matches the current prefix.
+export ZSH_AUTOSUGGEST_BUFFER_MAX_SIZE=20
+export ZSH_AUTOSUGGEST_STRATEGY=(history completion)
+
+# zsh-history-substring-search keybindings
+# Type any partial string (e.g. "docker") then press Up/Down to cycle
+# ONLY through history entries that contain that string.
+# Two escape sequences are bound per direction — different terminals
+# send different codes for the arrow keys.
+bindkey '^[[A' history-substring-search-up      # Up arrow
+bindkey '^[[B' history-substring-search-down    # Down arrow
+bindkey '^[OA' history-substring-search-up      # Up arrow (alt code)
+bindkey '^[OB' history-substring-search-down    # Down arrow (alt code)
+
+# zsh-you-should-use configuration
+# YSU_MESSAGE_POSITION=after   — show the hint after the command runs,
+#                                not before (less disruptive to flow)
+# YSU_MODE=ALL                 — warn for both regular aliases AND
+#                                global aliases (aliases that expand
+#                                anywhere on the line, not just position 0)
+export YSU_MESSAGE_POSITION="after"
+export YSU_MODE=ALL
+
 
 # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 # COMPLETIONS
 # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+# compinit scans all completion files and builds a dump (~/.zcompdump).
+# That scan is slow. The optimisation here: run full compinit only
+# when the dump is stale (older than today), and use `compinit -C`
+# (skip the scan, trust the cache) on every other shell open.
+#
+# The date check uses %j (day-of-year, 1–366) so the cache refreshes
+# once per calendar day regardless of time, and stat reads the dump's
+# modification day in the same format for a direct comparison.
+#
+# zinit cdreplay replays any completion registration calls that plugins
+# made BEFORE compinit ran (necessary because plugins load async).
 autoload -Uz compinit
-compinit
-zinit cdreplay -q   # replay completion fixes registered by plugins
+if [[ $(date +'%j') != "$(stat -f '%Sm' -t '%j' "$HOME/.zcompdump" 2>/dev/null)" ]]; then
+  compinit        # full rebuild — checks all fpath entries for security
+else
+  compinit -C     # fast path — use cached dump, skip security scan
+fi
+zinit cdreplay -q
 
-# fzf-tab: show file previews when completing paths
-zstyle ':fzf-tab:complete:cd:*' fzf-preview 'eza --tree --level=1 --icons $realpath 2>/dev/null'
-zstyle ':fzf-tab:complete:*' fzf-preview 'bat --color=always --line-range=:50 $realpath 2>/dev/null || eza --tree --level=1 --icons $realpath 2>/dev/null'
+# fzf-tab preview configuration
+# When you Tab-complete a `cd` argument, the right pane shows the
+# directory tree one level deep using eza.
+# For all other completions, the right pane shows a bat syntax-
+# highlighted preview of the file (first 50 lines), falling back
+# to an eza tree if the realpath is a directory.
+zstyle ':fzf-tab:complete:cd:*' fzf-preview \
+  'eza --tree --level=1 --icons $realpath 2>/dev/null'
+zstyle ':fzf-tab:complete:*' fzf-preview \
+  'bat --color=always --line-range=:50 $realpath 2>/dev/null || eza --tree --level=1 --icons $realpath 2>/dev/null'
+
 
 # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 # ENVIRONMENT
 # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+# Default editor — used by git commit, crontab -e, etc.
 export EDITOR="nvim"
 export VISUAL="nvim"
-export MANPAGER="sh -c 'col -bx | bat -l man -p'"  # man pages with syntax highlighting via bat
 
+# MANPAGER: pipe man output through col (strip backspace-bold) then bat.
+# Result: man pages rendered with syntax highlighting and line numbers.
+# -l man  = use man-page syntax definition
+# -p      = plain style (no decorations, just highlighting)
+export MANPAGER="sh -c 'col -bx | bat -l man -p'"
+
+# LESS options applied whenever less is used as a pager:
+# -R   pass raw ANSI escape codes through (needed for colour output)
+# --quit-if-one-screen  exit immediately if content fits on screen
+# --no-init  don't clear the screen when less exits (keeps output visible)
+export LESS='-R --quit-if-one-screen --no-init'
+
+# Locale — ensures consistent UTF-8 handling across all tools.
+# Without this, some CLI tools (curl, git, python) can garble
+# non-ASCII characters or behave differently per machine.
+export LANG="en_US.UTF-8"
+export LC_ALL="en_US.UTF-8"
+
+# Docker BuildKit — enables the modern build backend:
+# parallel stage execution, better caching, and inline cache export.
+# COMPOSE_DOCKER_CLI_BUILD makes docker compose use the same backend.
+export DOCKER_BUILDKIT=1
+export COMPOSE_DOCKER_CLI_BUILD=1
+
+# History — 100k entries kept both in memory and on disk.
+# HISTFILE explicitly set so it's always in the same place regardless
+# of whether $ZDOTDIR is customised.
+export HISTFILE="$HOME/.zsh_history"
 export HISTSIZE=100000
 export SAVEHIST=100000
-setopt HIST_IGNORE_DUPS    # skip exact duplicate of the previous command
-setopt HIST_IGNORE_ALL_DUPS # remove older duplicate entries from history
-setopt HIST_IGNORE_SPACE   # don't save commands that start with a space
-setopt HIST_VERIFY         # show expanded history before executing
-setopt SHARE_HISTORY       # share history across all open terminals instantly
 
-setopt AUTO_CD             # type a dir name without cd to enter it
-setopt CORRECT             # suggest corrections for mistyped commands
+# History options:
+# EXTENDED_HISTORY     — prefix each entry with : <timestamp>:<elapsed>;
+#                        used by atuin and `history -E` for time display
+# INC_APPEND_HISTORY   — write each command immediately on execution,
+#                        not only when the shell exits; prevents loss
+#                        if the terminal crashes
+# HIST_IGNORE_DUPS     — don't add a command if it's identical to the
+#                        immediately preceding entry
+# HIST_IGNORE_ALL_DUPS — go further: remove any older duplicate from
+#                        the list, keeping only the most recent occurrence
+# HIST_IGNORE_SPACE    — prefix a command with a space to skip recording
+#                        it — useful for secrets: " export API_KEY=..."
+# HIST_VERIFY          — when ! expansion is used, show the substituted
+#                        command and wait for Enter before running
+# SHARE_HISTORY        — all open terminals share the same history in
+#                        real-time (new commands visible in other tabs
+#                        immediately, not just on next shell start)
+setopt EXTENDED_HISTORY
+setopt INC_APPEND_HISTORY
+setopt HIST_IGNORE_DUPS
+setopt HIST_IGNORE_ALL_DUPS
+setopt HIST_IGNORE_SPACE
+setopt HIST_VERIFY
+setopt SHARE_HISTORY
 
-# Word boundaries — / and . treated as separators so Ctrl+W and
-# Ctrl+Left/Right stop at path components, not just spaces.
+# Shell behaviour:
+# AUTO_CD   — type a directory name without `cd` to enter it
+# CORRECT   — suggest a spelling correction for mistyped commands
+setopt AUTO_CD
+setopt CORRECT
+
+# WORDCHARS controls which characters are treated as part of a "word"
+# for Ctrl+W (delete word) and Ctrl+Left/Right (jump word).
+# Removing / and . from the default set means those stop at path
+# components, so Ctrl+W on "/usr/local/bin" deletes "bin", not the
+# whole path. The remaining chars (*, ?, _, etc.) stay word-internal.
 WORDCHARS='*?_-.[]~=&;!#$%^(){}<>'
 
-# Ctrl+Left / Ctrl+Right — jump by word
+# Ctrl+Left / Ctrl+Right — jump forward/backward one word.
+# These are the ANSI escape sequences sent by most terminal emulators
+# for Ctrl+arrow. If your terminal uses different codes, check with
+# Ctrl+V then the key combination to see what it sends.
 bindkey "^[[1;5C" forward-word
 bindkey "^[[1;5D" backward-word
+
 
 # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 # MODERN TOOL REPLACEMENTS
 # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-# Each block is guarded — falls back gracefully if tool not installed.
+# Every block is guarded with `command -v` — if the tool isn't
+# installed the alias is simply not set and the original command
+# keeps working. Install any of these with: brew install <name>
 
-# bat — cat with syntax highlighting, line numbers, git markers
-# --paging=never means it behaves like cat (no less pager) by default
+# bat — cat with syntax highlighting, line numbers, and git-diff markers.
+# --paging=never makes it behave like cat (no less pager) so it doesn't
+# block in scripts or pipelines. Use `catp` when you want pagination.
 if command -v bat &>/dev/null; then
-  alias cat='bat --paging=never'
-  alias catp='bat'                 # catp = cat with paging (for large files)
+  alias cat='bat --paging=never'  # syntax-highlighted cat, no pager
+  alias catp='bat'                # cat with paging — good for large files
 fi
 
-# eza — ls replacement with icons, git status, tree view
+# eza — modern ls built in Rust. Shows icons (needs a Nerd Font),
+# git status per file, human-readable sizes, and colour by file type.
+# Falls back to colour ls if eza isn't installed.
 if command -v eza &>/dev/null; then
-  alias ls='eza --icons'
-  alias ll='eza -lh --icons --git'
-  alias la='eza -lah --icons --git'
-  alias lt='eza --tree --icons --level=2'
+  alias ls='eza --icons'                   # basic listing with icons
+  alias ll='eza -lh --icons --git'         # long format + git status column
+  alias la='eza -lah --icons --git'        # long format + hidden files
+  alias lt='eza --tree --icons --level=2'  # tree view 2 levels deep
 else
   alias ls='ls --color=auto'
   alias ll='ls -lh --color=auto'
   alias la='ls -lah --color=auto'
 fi
 
-# rg — ripgrep, grep replacement (respects .gitignore, faster)
+# rg (ripgrep) — grep replacement.
+# 3–10× faster than grep, respects .gitignore automatically,
+# searches binary files safely, and has better default output.
+# Usage: grep "pattern" [path]   (same interface as grep)
 command -v rg &>/dev/null && alias grep='rg'
 
-# fd — find replacement (simpler syntax, respects .gitignore)
+# fd — find replacement.
+# Simpler syntax, respects .gitignore, Unicode-aware, colour output.
+# Usage: find "*.rs"             (vs find . -name "*.rs")
+#        find -t d src           (find directories named src)
 command -v fd &>/dev/null && alias find='fd'
 
-# btop — visual system monitor with CPU, mem, net, disk graphs
+# btop — terminal system monitor with graphs for CPU, memory,
+# network I/O, and disk I/O. Replaces both top and htop.
+# Keybindings inside btop: q=quit, f=filter, k=kill, m=mem sort
 command -v btop &>/dev/null && alias top='btop'
 
-# tldr — practical quick-reference man pages
-# Usage: tldr tar   →  shows the 5 commands you actually use
+# tldr — community-maintained practical man pages.
+# Shows the 5–10 most common usage patterns instead of the full spec.
+# Usage: help tar   help git   help ffmpeg
 command -v tldr &>/dev/null && alias help='tldr'
+
+# duf — modern df. Groups mount points by type (local, network, special)
+# and shows colour-coded bars for used vs free space at a glance.
+# Usage: df                 (overview of all filesystems)
+#        df /home           (specific path)
+command -v duf &>/dev/null && alias df='duf'
+
+# dust — modern du. Draws a visual bar chart showing which directories
+# are consuming the most space. Much faster than du on large trees.
+# Usage: du                 (current directory)
+#        du /var/log        (specific path)
+#        du -n 10           (top 10 entries only)
+command -v dust &>/dev/null && alias du='dust'
+
+# procs — modern ps. Colour output, tree view of parent/child relations,
+# and human-readable memory sizes. Supports fuzzy search by name.
+# Usage: ps                 (all processes)
+#        ps nginx           (filter to processes matching "nginx")
+#        ps --tree          (show process tree)
+command -v procs &>/dev/null && alias ps='procs'
+
+# xh — modern HTTP client. httpie-compatible syntax but written in Rust,
+# so it's significantly faster and has no Python dependency.
+# Usage: http get httpbin.org/get
+#        http post api.example.com/users name=alice age:=30
+#        http -j get api.example.com    (JSON output only)
+command -v xh &>/dev/null && alias http='xh'
+
+# glow — render Markdown files beautifully in the terminal.
+# Without an argument, opens a TUI browser of all .md files in the
+# current directory. Useful for reading READMEs without leaving the terminal.
+# Usage: md README.md       (render a specific file)
+#        md                 (browse all .md files in current dir)
+command -v glow &>/dev/null && alias md='glow'
+
+# ouch — universal archive tool. Detects format from the file extension
+# automatically — no flags needed. Supports .tar.gz, .zip, .7z, .rar,
+# .bz2, .xz, .zst, and more. When installed it overrides the manual
+# extract() case statement below (still kept as fallback).
+# Usage: extract archive.tar.gz      (decompress)
+#        compress src/ output.tar.gz  (compress)
+if command -v ouch &>/dev/null; then
+  extract() { ouch decompress "$@"; }
+  alias compress='ouch compress'
+fi
+
+# sd — modern sed with cleaner regex syntax. Supports literal strings
+# and regex without backslash-escaping every special character.
+# Intentionally NOT aliased over `sed` — the syntax is different enough
+# that scripts calling `sed` would break. Use `sdr` explicitly.
+# Usage: sdr 'old text' 'new text' file.txt
+#        sdr '(\w+) (\w+)' '$2 $1' file.txt   (capture groups)
+command -v sd &>/dev/null && alias sdr='sd'
+
+
+# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+# GLOBAL ALIASES
+# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+# Global aliases expand anywhere on the command line — not just at
+# position 0. This makes them pipe-friendly postfix shortcuts.
+# Usage: docker logs myapp L          (pipe into less)
+#        kubectl get pods G Running   (grep through output)
+#        cargo build NUL              (silence all output)
+alias -g G='| grep'          # grep:   cmd G pattern
+alias -g Gi='| grep -i'      # igrep:  cmd Gi pattern  (case-insensitive)
+alias -g H='| head'          # head:   cmd H -20
+alias -g T='| tail'          # tail:   cmd T -20
+alias -g L='| less'          # page:   cmd L
+alias -g C='| pbcopy'        # copy:   cmd C            (macOS clipboard)
+alias -g P='| pbpaste'       # paste:  P | cmd
+alias -g COUNT='| wc -l'     # count:  cmd COUNT
+alias -g NUL='>/dev/null 2>&1' # silence: cmd NUL
+alias -g J='| jq .'          # pretty JSON: curl api/endpoint J
+
 
 # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 # ALIASES: NAVIGATION
 # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-alias ..='cd ..'
-alias ...='cd ../..'
-alias ~='cd ~'
-alias -- -='cd -'          # return to previous directory
+# Quick directory traversal. These complement AUTO_CD (which lets
+# you type a directory name directly) and zoxide (which learns
+# frequent paths so `z proj` jumps to ~/dev/my-project).
+alias ..='cd ..'           # go up one level
+alias ...='cd ../..'       # go up two levels
+alias ~='cd ~'             # go to home directory
+alias -- -='cd -'          # return to previous directory (cd toggle)
+
+# up — go up N directory levels in one command.
+# More readable than chains of ../../../
+# Usage: up        → cd ..  (default 1)
+#        up 3      → cd ../../..
+#        up 5      → cd ../../../../..
+up() {
+  local d='' n="${1:-1}"
+  for ((i=0; i<n; i++)); do d="../$d"; done
+  cd "$d"
+}
+
+# tmpcd — create a throwaway temp directory and cd into it.
+# Perfect for one-off experiments, building test files, or
+# checking out a tool without polluting your workspace.
+# The path is printed so you can reference it later.
+# Usage: tmpcd
+tmpcd() {
+  local dir
+  dir=$(mktemp -d)
+  echo "→ $dir"
+  cd "$dir"
+}
+
+# dot — jump straight to the dotfiles source directory.
+# Usage: dot
+alias dot='cd ~/Desktop/dotfiles/dotfiles'
+
+# Auto-list after cd — runs `ls` every time you change directory.
+# Uses the ls alias (eza with icons if installed) so the listing
+# is always styled. Defined via add-zsh-hook so it stacks cleanly
+# with other chpwd hooks (zoxide, direnv, etc.).
+autoload -Uz add-zsh-hook
+_auto_ls() { ls; }
+add-zsh-hook chpwd _auto_ls
+
 
 # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 # ALIASES: EDITOR
 # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+# All editor aliases point to nvim. `vi` and `vim` are overridden
+# so muscle memory from older setups keeps working.
 alias v='nvim'
 alias vi='nvim'
 alias vim='nvim'
 
-# Safer defaults — always prompt before overwriting/deleting
-alias cp='cp -iv'
-alias mv='mv -iv'
-alias rm='rm -iv'
+# zshedit — open the zshrc source file directly in nvim.
+# Points to the dotfiles source (not the deployed ~/.config copy)
+# so edits go into version control automatically.
+alias zshedit='nvim ~/Desktop/dotfiles/dotfiles/zsh/zshrc'
+
+# Safer file operations — -i prompts before overwriting/deleting,
+# -v prints what was done. Prevents accidental data loss.
+# To bypass for scripting: \cp, \mv, \rm (backslash skips aliases).
+alias cp='cp -iv'   # -i=interactive (prompt on overwrite) -v=verbose
+alias mv='mv -iv'   # -i=interactive (prompt on overwrite) -v=verbose
+alias rm='rm -iv'   # -i=interactive (prompt on delete)    -v=verbose
+
+# vf — fuzzy-find a file and open it in nvim.
+# Preview pane shows syntax-highlighted file content.
+# Usage: vf              (search from current dir)
+#        vf src/         (search within a subdirectory)
+vf() {
+  local file
+  file=$(fd --type f --hidden --exclude .git "${1:-.}" | \
+    fzf --preview 'bat --color=always --line-range=:80 {}')
+  [[ -n "$file" ]] && nvim "$file"
+}
+
+# rgf — interactive ripgrep with live fzf preview, opens result in nvim.
+# Type to search across file contents; the preview pane highlights the
+# matching line in context. Press Enter to jump straight to that line.
+# Usage: rgf "TODO"
+#        rgf "fn main" src/
+rgf() {
+  rg --color=always --line-number --no-heading --smart-case "${*:-}" |
+    fzf --ansi \
+        --delimiter ':' \
+        --preview 'bat --color=always {1} --highlight-line {2}' \
+        --preview-window 'right:60%:border-left:+{2}+3/3' \
+        --bind 'enter:become(nvim {1} +{2})'
+}
+
+# scratch — open a temporary scratch buffer in nvim.
+# Useful for quick notes, drafting messages, or pasting something
+# to inspect. File extension defaults to .md for markdown syntax.
+# Usage: scratch          → /tmp/scratch.md
+#        scratch py       → /tmp/scratch.py  (with Python highlighting)
+#        scratch json     → /tmp/scratch.json
+scratch() { nvim "/tmp/scratch.${1:-md}"; }
+
 
 # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 # ALIASES: GIT
 # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-# lazygit — full TUI: stage hunks, interactive rebase, branch mgmt
-# Open with: lg
-alias lg='lazygit'
+# For interactive git work (staging hunks, rebase, branch management)
+# prefer lazygit (lg) over these aliases. These are for quick one-liners
+# and muscle-memory speed in the common cases.
 
-alias gs='git status -sb'                               # short status with branch
-alias ga='git add'
-alias gaa='git add -A'
-alias gc='git commit -m'
-alias gca='git commit --amend --no-edit'                # amend last commit, keep message
-alias gp='git push'
-alias gpf='git push --force-with-lease'                 # safe force push
-alias gl='git pull'
-alias gco='git checkout'
-alias gcb='git checkout -b'
-alias gb='git branch -vv'                               # branches with tracking info
-alias glog='git log --oneline --graph --decorate --all' # visual branch graph
-alias gd='git diff'                                     # uses delta if configured
-alias gds='git diff --staged'
-alias gst='git stash'
-alias gstp='git stash pop'
-alias grbi='git rebase -i'
-alias gundo='git reset HEAD~1 --mixed'                  # undo last commit, keep changes staged
-alias gnuke='git reset --hard && git clean -fd'         # ⚠ destroy all local changes
-alias groot='cd $(git rev-parse --show-toplevel)'       # jump to repo root
+alias lg='lazygit'                                      # full TUI git client
+
+alias gs='git status -sb'                               # short status: branch + changed files
+alias ga='git add'                                      # stage file(s)
+alias gaa='git add -A'                                  # stage everything (tracked + untracked)
+alias gc='git commit -m'                                # commit with inline message: gc "msg"
+alias gca='git commit --amend --no-edit'                # amend last commit, keep its message
+alias gp='git push'                                     # push to tracked remote
+alias gpf='git push --force-with-lease'                 # force-push but abort if remote has new commits
+alias gl='git pull'                                     # pull (fetch + merge/rebase per config)
+alias gco='git checkout'                                # checkout branch or file: gco main
+alias gcb='git checkout -b'                             # create + switch to new branch: gcb feat/foo
+alias gb='git branch -vv'                               # list branches with tracking remote + ahead/behind
+alias glog='git log --oneline --graph --decorate --all' # visual ASCII branch graph
+alias gd='git diff'                                     # unstaged diff (rendered by delta if configured)
+alias gds='git diff --staged'                           # staged diff (what will go into next commit)
+alias gst='git stash'                                   # stash current changes
+alias gstp='git stash pop'                              # restore most recent stash
+alias grbi='git rebase -i'                              # interactive rebase: grbi HEAD~3
+alias gundo='git reset HEAD~1 --mixed'                  # undo last commit, keep changes unstaged
+alias gnuke='git reset --hard && git clean -fd'         # ⚠ discard ALL local changes — irreversible
+alias groot='cd $(git rev-parse --show-toplevel)'       # cd to repo root from anywhere inside it
+
 
 # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 # ALIASES: DOCKER
 # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-alias d='docker'
-alias dps='docker ps'
-alias dpsa='docker ps -a'
-alias dex='docker exec -it'
-alias dlog='docker logs -f'
-alias dstop='docker stop $(docker ps -q)'              # stop all running containers
-alias dclean='docker system prune -af'                 # ⚠ remove all unused images/containers
-alias dc='docker compose'
-alias dcu='docker compose up'
-alias dcud='docker compose up -d'                      # detached
-alias dcd='docker compose down'
-alias dcr='docker compose restart'
-alias dcl='docker compose logs -f'
-alias dcb='docker compose build'
+# Note: DOCKER_BUILDKIT=1 is set in ENVIRONMENT above, enabling
+# parallel builds, inline cache, and BuildKit-only Dockerfile features.
+
+# ── Containers ────────────────────────────────────────
+alias d='docker'                                         # shorthand
+alias dps='docker ps'                                    # running containers
+alias dpsa='docker ps -a'                                # all containers (incl. stopped)
+alias dex='docker exec -it'                              # exec into container: dex <id> bash
+alias dlog='docker logs -f'                              # stream container logs: dlog <id>
+alias dstop='docker stop $(docker ps -q)'                # stop ALL running containers
+alias dclean='docker system prune -af'                   # ⚠ remove all unused images, containers, volumes
+alias dimg='docker images'                               # list local images
+alias drm='docker rm $(docker ps -aq) 2>/dev/null'       # remove all STOPPED containers
+alias drmi='docker rmi $(docker images -q) 2>/dev/null'  # remove ALL local images
+alias dip='docker inspect --format "{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}"'  # container IP: dip <id>
+dsh()   { docker exec -it "$1" sh;   }                   # open sh shell in container: dsh <id>
+dbash() { docker exec -it "$1" bash; }                   # open bash shell in container: dbash <id>
+denv()  { docker inspect "$1" | python3 -m json.tool | grep -A1 '"Env"'; }  # print env vars: denv <id>
+
+# ── Docker Compose ────────────────────────────────────
+alias dc='docker compose'                                # shorthand
+alias dcu='docker compose up'                            # start services (foreground)
+alias dcud='docker compose up -d'                        # start services detached (background)
+alias dcd='docker compose down'                          # stop + remove containers
+alias dcr='docker compose restart'                       # restart all services
+alias dcl='docker compose logs -f'                       # stream all service logs
+alias dcb='docker compose build'                         # rebuild images
+
 
 # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 # ALIASES: KUBERNETES
 # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-alias k='kubectl'
-alias kgp='kubectl get pods'
-alias kgpa='kubectl get pods -A'                       # all namespaces
-alias kgs='kubectl get services'
-alias kgn='kubectl get nodes'
-alias kd='kubectl describe'
-alias kdp='kubectl describe pod'
-alias klog='kubectl logs -f'
-alias kex='kubectl exec -it'
-alias kctx='kubectl config use-context'                # switch cluster
-alias kns='kubectl config set-context --current --namespace' # switch namespace
-alias kaf='kubectl apply -f'
-alias kdf='kubectl delete -f'
-ksh()   { kubectl exec -it "$1" -- sh; }               # shell into pod (sh)
-kbash() { kubectl exec -it "$1" -- bash; }             # shell into pod (bash)
+# For interactive cluster work prefer k9s (alias: kk) — it provides
+# live dashboards, log tailing, port-forwarding, and shell access
+# through a TUI. These aliases cover quick imperative commands.
+
+# ── Core resource inspection ──────────────────────────
+alias k='kubectl'                                         # base shorthand
+alias kgp='kubectl get pods'                              # pods in current namespace
+alias kgpa='kubectl get pods -A'                          # pods in ALL namespaces
+alias kgs='kubectl get services'                          # services
+alias kgn='kubectl get nodes'                             # nodes with status
+alias kgd='kubectl get deployments'                       # deployments
+alias kgda='kubectl get deployments -A'                   # deployments in ALL namespaces
+alias kgcm='kubectl get configmap'                        # configmaps
+alias kgsec='kubectl get secret'                          # secrets (values are base64)
+alias kd='kubectl describe'                               # full detail: kd pod <name>
+alias kdp='kubectl describe pod'                          # shorthand for pod describe
+
+# ── Logs ──────────────────────────────────────────────
+alias klog='kubectl logs -f'                              # stream single pod logs
+klogs() { kubectl logs -f --tail=100 "$@"; }              # tail last 100 lines: klogs <pod> [-c <container>]
+
+# ── Apply / Delete ────────────────────────────────────
+alias kaf='kubectl apply -f'                              # apply a manifest: kaf deployment.yaml
+alias kdf='kubectl delete -f'                             # delete by manifest: kdf deployment.yaml
+
+# ── Exec / Shell ─────────────────────────────────────
+alias kex='kubectl exec -it'                              # exec: kex <pod> -- ls /tmp
+ksh()   { kubectl exec -it "$1" -- sh;   }                # open sh shell: ksh <pod>
+kbash() { kubectl exec -it "$1" -- bash; }                # open bash shell: kbash <pod>
+
+# ── Port forwarding ───────────────────────────────────
+# kpf <pod-name> <port>   — forwards localhost:<port> → pod:<port>
+# Example: kpf my-api-pod 8080
+kpf() { kubectl port-forward "$1" "${2}:${2}"; }
+
+# ── Deployment management ─────────────────────────────
+alias krollout='kubectl rollout status deployment'        # watch rollout: krollout myapp
+alias kscale='kubectl scale deployment'                   # scale: kscale myapp --replicas=3
+
+# ── Context / Namespace switching ────────────────────
+# kubectx/kubens (brew install kubectx) override these with fuzzy pickers
+alias kctx='kubectl config use-context'                   # switch cluster context
+alias kns='kubectl config set-context --current --namespace'  # switch namespace
+command -v kubectx &>/dev/null && alias kctx='kubectx'
+command -v kubens  &>/dev/null && alias kns='kubens'
+
+# ── TUI ───────────────────────────────────────────────
+# k9s keybindings (inside TUI):
+#   : then resource name  — navigate to any resource type
+#   / — filter by name    s — shell into pod
+#   l — logs              d — describe
+#   ctrl+d — delete       ctrl+k — kill
+#   q — quit
+command -v k9s &>/dev/null && alias kk='k9s'
+
+# ── Stern — multi-pod log tailing ─────────────────────
+# Unlike `kubectl logs`, stern can tail logs from multiple pods
+# simultaneously, filtered by a regex. Essential for microservices.
+# Usage: klogs-all "api-.*"               — all pods matching regex
+#        klogs-all myapp -n production    — specific namespace
+#        klogs-all myapp --since 10m      — only last 10 minutes
+#        klogs-all myapp -o json          — JSON structured output
+command -v stern &>/dev/null && alias klogs-all='stern'
+
+# ── Helm — Kubernetes package manager ─────────────────
+# Helm installs pre-packaged Kubernetes applications ("charts").
+# Usage workflow:
+#   hrepo                     — update chart index from all repos
+#   hsr bitnami/postgresql    — search for a chart
+#   hshow bitnami/postgresql  — inspect default values before install
+#   hi my-db bitnami/postgresql --set auth.postgresPassword=secret
+#   hls                       — verify it's running
+if command -v helm &>/dev/null; then
+  alias h='helm'
+  alias hi='helm install'                   # install a new chart release
+  alias hu='helm upgrade --install'         # upgrade, or install if not present (idempotent)
+  alias hd='helm uninstall'                 # remove a chart release
+  alias hls='helm list -A'                  # list all releases in all namespaces
+  alias hrepo='helm repo update'            # fetch latest chart versions from all repos
+  alias hsr='helm search repo'              # search repos: hsr postgresql
+  alias hshow='helm show values'            # inspect a chart's default values: hshow bitnami/redis
+  alias hdiff='helm diff upgrade'           # show what a helm upgrade would change (needs helm-diff plugin)
+fi
+
 
 # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 # ALIASES: AWS
 # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-alias awsid='aws sts get-caller-identity'              # who am I?
-awsp()   { export AWS_PROFILE="$1"; echo "AWS_PROFILE → $1"; }  # switch profile
+
+# awsid — print the current caller identity (account ID, user/role ARN).
+# Useful to confirm which account + credentials are active before
+# running destructive operations.
+alias awsid='aws sts get-caller-identity'
+
+# awsp — switch the active AWS profile for the current shell session.
+# Profiles are configured in ~/.aws/config and ~/.aws/credentials.
+# Usage: awsp prod      awsp staging      awsp default
+awsp() { export AWS_PROFILE="$1"; echo "AWS_PROFILE → $1"; }
+
+# s3ls — list all S3 buckets, or objects in a bucket.
+# Usage: s3ls             — list all buckets
+#        s3ls s3://my-bucket/prefix/  — list objects under a prefix
 alias s3ls='aws s3 ls'
-ssm()    { aws ssm start-session --target "$1"; }      # SSM session to EC2 instance ID
-cwlogs() { aws logs tail "$1" --follow; }              # tail a CloudWatch log group
+
+# ssm — open an interactive shell session to an EC2 instance via
+# AWS Systems Manager. No SSH key or open port 22 required.
+# Usage: ssm i-0abc1234def567890
+ssm() { aws ssm start-session --target "$1"; }
+
+# cwlogs — stream a CloudWatch log group to stdout in real-time.
+# Useful for watching application logs without the AWS console.
+# Usage: cwlogs /aws/lambda/my-function
+#        cwlogs /ecs/my-service
+cwlogs() { aws logs tail "$1" --follow; }
+
 
 # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 # ALIASES: EMBEDDED / C
 # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-alias armcc='arm-none-eabi-gcc'
-alias armobjdump='arm-none-eabi-objdump -d'
-alias armsize='arm-none-eabi-size'
-alias armgdb='arm-none-eabi-gdb'
-alias serial='picocom -b 115200 /dev/ttyUSB0'          # USB serial console
-alias serial1='picocom -b 115200 /dev/ttyUSB1'
-alias qemu-arm='qemu-system-arm'
-alias m='make'
-alias mc='make clean'
-alias mf='make flash'
-alias mb='make build'
-alias mr='make run'
-disasm() { objdump -d "$1" | less; }                   # disassemble a binary
+# Shortcuts for the ARM bare-metal toolchain (arm-none-eabi-*).
+# Install toolchain: brew install --cask gcc-arm-embedded
+# Install QEMU:      brew install qemu
+
+alias armcc='arm-none-eabi-gcc'              # cross-compile C for ARM
+alias armobjdump='arm-none-eabi-objdump -d'  # disassemble ARM ELF: armobjdump firmware.elf
+alias armsize='arm-none-eabi-size'           # show section sizes (text/data/bss): armsize firmware.elf
+alias armgdb='arm-none-eabi-gdb'             # GDB for ARM targets (use with OpenOCD)
+alias serial='picocom -b 115200 /dev/ttyUSB0'   # open serial console on ttyUSB0
+alias serial1='picocom -b 115200 /dev/ttyUSB1'  # open serial console on ttyUSB1
+alias qemu-arm='qemu-system-arm'             # emulate ARM system
+
+# Make shortcuts — these wrap the most common Makefile targets.
+# Assumes a Makefile in the current directory with standard target names.
+alias m='make'          # build default target
+alias mc='make clean'   # remove build artefacts
+alias mf='make flash'   # flash firmware to target (via OpenOCD / st-flash etc.)
+alias mb='make build'   # explicit build target (when Makefile separates build from default)
+alias mr='make run'     # run the built binary (useful for host-native targets)
+
+# disasm — disassemble any ELF binary and page through it.
+# Uses the host objdump (not ARM cross-tools), so use armobjdump for ARM ELFs.
+# Usage: disasm ./a.out
+disasm() { objdump -d "$1" | less; }
+
 
 # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 # ALIASES: PYTHON
 # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-alias py='python3'
-alias pip='pip3'
-alias venv='python3 -m venv .venv'                     # create venv in current dir
-alias va='source .venv/bin/activate'                   # activate venv
-alias vd='deactivate'                                  # deactivate venv
-mkvenv() { python3 -m venv .venv && source .venv/bin/activate; }  # create + activate
+
+alias py='python3'    # shorter invocation
+alias pip='pip3'      # ensure pip3 is used, not pip2
+
+# venv workflow — prefer uv (10–100× faster) if installed, else stdlib.
+# venv — create a .venv in the current directory (doesn't activate)
+# va   — activate an existing .venv
+# vd   — deactivate the current venv
+alias venv='python3 -m venv .venv'  # create venv (use mkvenv to also activate)
+alias va='source .venv/bin/activate' # activate .venv in current dir
+alias vd='deactivate'                # deactivate current venv
+
+# mkvenv — create a venv AND activate it in one step.
+# Prefers uv (much faster, handles Python version selection) and
+# falls back to the stdlib venv module if uv isn't installed.
+mkvenv() {
+  if command -v uv &>/dev/null; then
+    uv venv .venv && source .venv/bin/activate
+  else
+    python3 -m venv .venv && source .venv/bin/activate
+  fi
+}
+
+# pyclean — remove all __pycache__ directories and .pyc files recursively.
+# Run before committing or archiving a project to keep the tree clean.
+# The `2>/dev/null` on the first find suppresses errors when it tries to
+# recurse into directories it already deleted.
+pyclean() {
+  find . -type d -name __pycache__ -exec rm -rf {} + 2>/dev/null
+  find . -name "*.pyc" -delete
+  echo "Cleaned."
+}
+
+# pyreqs — freeze the current virtualenv into requirements.txt.
+# Usage: activate your venv, then run `pyreqs` to capture a snapshot.
+pyreqs() { pip freeze > requirements.txt && echo "Saved to requirements.txt"; }
+
+# repl — open an interactive Python REPL.
+# Uses ptpython (brew install ptpython) if available — it adds syntax
+# highlighting, multi-line editing, and history to the standard REPL.
+alias repl='command -v ptpython &>/dev/null && ptpython || python3'
+
+
+# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+# ALIASES: UV  (fast Python package / project manager)
+# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+# uv is a Rust-based drop-in replacement for pip, pip-tools, pipx,
+# venv, and parts of poetry. It's 10–100× faster than pip.
+#
+# Two usage modes:
+#   pip mode  — uv pip install / uv venv (compatible with requirements.txt)
+#   project mode — uv init / uv add / uv sync (uses pyproject.toml + lockfile)
+#
+# Install: curl -LsSf https://astral.sh/uv/install.sh | sh
+# Docs:    https://docs.astral.sh/uv/
+if command -v uv &>/dev/null; then
+  alias uvi='uv pip install'         # install a package into current venv
+  alias uvid='uv add --dev'          # add a dev dependency (project mode, pyproject.toml)
+  alias uva='uv add'                 # add a runtime dependency (project mode)
+  alias uvr='uv remove'              # remove a dependency
+  alias uvs='uv sync'                # sync venv to match lockfile exactly
+  alias uvrun='uv run'               # run a command inside the project venv: uvrun pytest
+  alias uvvenv='uv venv'             # create a venv (faster than python -m venv)
+  alias uvlock='uv lock'             # regenerate uv.lock from pyproject.toml
+  alias uvup='uv pip install --upgrade'  # upgrade a specific package
+  alias uvupall='uv pip install --upgrade $(uv pip list --format=freeze | cut -d= -f1 | tr "\n" " ")'
+  alias uvx='uvx'                    # run a tool ephemerally without installing: uvx ruff check .
+  alias uvinit='uv init'             # scaffold a new project with pyproject.toml
+  alias uvtree='uv pip tree'         # show full dependency tree of current venv
+fi
+
 
 # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 # ALIASES: GO
 # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-alias gob='go build ./...'
-alias gor='go run .'
-alias got='go test ./...'
-alias gotv='go test -v ./...'
-alias gomod='go mod tidy'
-alias govet='go vet ./...'
-alias golint='golangci-lint run'
+
+alias gob='go build ./...'              # build all packages in module
+alias gor='go run .'                    # run main package in current dir
+alias got='go test ./...'               # run all tests
+alias gotv='go test -v ./...'           # run all tests with verbose output
+alias gomod='go mod tidy'               # add missing / remove unused module deps
+alias govet='go vet ./...'              # report likely mistakes in code
+alias golint='golangci-lint run'        # run configured linters (needs golangci-lint)
+alias goi='go install'                  # install a binary: goi github.com/user/tool@latest
+alias goclean='go clean -cache -testcache'  # wipe build cache AND test result cache
+alias gogen='go generate ./...'         # run all //go:generate directives
+alias gobench='go test -bench=. -benchmem ./...'  # benchmark all, report mem allocations
+alias gorace='go test -race ./...'      # run tests with the data race detector enabled
+alias gowork='go work'                  # go workspace management shorthand
+
+# gotf — run tests matching a specific name pattern.
+# Uses -run which accepts a regexp, so gotf "TestFoo" matches TestFoo,
+# TestFooBar, TestFooWithEdgeCase, etc.
+# Usage: gotf TestMyFunc
+#        gotf "TestParser.*"
+gotf() { go test -v -run "$1" ./...; }
+
+# gocover — run tests with coverage and open the HTML report in a browser.
+# The report shows which lines were/weren't hit and the overall %.
+# Coverage profile is written to /tmp so it doesn't clutter the project.
+gocover() {
+  go test -coverprofile=/tmp/go-cover.out ./... && \
+  go tool cover -html=/tmp/go-cover.out
+}
+
+# godeps — print the module dependency graph as a simple arrow list.
+# Requires graphviz for dot rendering but this version just prints text.
+# Usage: godeps | head -20    — see direct dependencies only
+godeps() { go mod graph | awk '{print $1, "->", $2}' | head -50; }
+
 
 # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 # ALIASES: NODE
 # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-alias ni='npm install'
-alias nid='npm install --save-dev'
-alias nr='npm run'
-alias ns='npm start'
-alias nt='npm test'
-alias nb='npm run build'
+# Use mise (see ELITE TOOLS) to manage Node versions per-project.
+
+alias ni='npm install'              # install all deps from package.json
+alias nid='npm install --save-dev'  # install a dev dependency: nid vitest
+alias nr='npm run'                  # run a script: nr dev   nr build
+alias ns='npm start'                # shorthand for npm run start
+alias nt='npm test'                 # shorthand for npm run test
+alias nb='npm run build'            # shorthand for npm run build
+
 
 # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 # ALIASES: RUST
 # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-alias cb='cargo build'
-alias cr='cargo run'
-alias ct='cargo test'
-alias ccheck='cargo check'                             # fast type-check without building
-alias cclippy='cargo clippy'                           # linter with smart suggestions
-alias cfmt='cargo fmt'
-alias cbr='cargo build --release'
-alias crr='cargo run --release'
-alias cwatch='cargo watch -x run'                      # rebuild + rerun on file change
+# Install Rust: curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
+# Extra cargo subcommands used below (install via cargo):
+#   cargo-watch:   cargo install cargo-watch
+#   cargo-expand:  cargo install cargo-expand
+#   cargo-bloat:   cargo install cargo-bloat
+#   cross:         cargo install cross   (cross-compilation, needs Docker)
+
+# ── Build / Run ────────────────────────────────────────
+alias cb='cargo build'              # debug build (fast, unoptimised, includes debug info)
+alias cbr='cargo build --release'   # release build (optimised, slower to build)
+alias cr='cargo run'                # build + run debug binary
+alias crr='cargo run --release'     # build + run release binary
+
+# ── Test ──────────────────────────────────────────────
+alias ct='cargo test'               # run all tests
+alias ctest1='cargo test -- --test-threads=1'  # single-threaded — prevents parallelism issues
+                                               # when tests share global state or file handles
+
+# ctf — run tests matching a specific name (substring match).
+# cargo test filters by substring, not regex — "foo" matches test_foo and foo_bar.
+# Usage: ctf my_function_name
+ctf() { cargo test "$1"; }
+
+# ── Quality / Lint ────────────────────────────────────
+alias ccheck='cargo check'          # type-check without producing a binary — fastest feedback loop
+alias cclippy='cargo clippy'        # Clippy linter — catches common mistakes and style issues
+alias cautoclippy='cargo clippy --fix --allow-dirty'  # auto-fix Clippy warnings in dirty working tree
+alias cfmt='cargo fmt'              # format all source files with rustfmt
+alias cfix='cargo fix'              # auto-apply compiler-suggested fixes
+
+# ── Docs / Analysis ───────────────────────────────────
+alias cdoc='cargo doc --open'       # build and open crate docs in browser
+alias cbench='cargo bench'          # run benchmarks (requires criterion or built-in bench)
+alias cexpand='cargo expand'        # expand macros to plain Rust — needs cargo-expand
+alias csize='cargo bloat --release' # show which functions contribute most to binary size — needs cargo-bloat
+
+# ── Dependency management ─────────────────────────────
+alias cadd='cargo add'              # add dependency to Cargo.toml: cadd serde --features derive
+alias crm='cargo remove'            # remove dependency from Cargo.toml
+alias cup='cargo update'            # update Cargo.lock to latest compatible versions
+
+# ── Hot-reload ────────────────────────────────────────
+alias cwatch='cargo watch -x run'   # rebuild + rerun on any file change — needs cargo-watch
+                                    # Usage: cwatch          (watch src/)
+                                    #        cwatch -x test  (watch + retest)
+
+# ── Cross-compilation ─────────────────────────────────
+# cross uses Docker to provide the correct linker + sysroot for the target.
+# Usage: cross-build aarch64-unknown-linux-gnu
+#        cross-build thumbv7em-none-eabihf   (embedded ARM Cortex-M4)
+cross-build() { cross build --target "$1" --release; }
+
 
 # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 # FZF
 # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-# Shell keybindings (loaded from fzf's own install):
-#   Ctrl+T — fuzzy insert file path at cursor
-#   Ctrl+R — fuzzy search history (overridden by atuin if installed)
-#   Alt+C  — fuzzy cd into a directory
+# fzf is the fuzzy-finder engine used by many functions below.
+# Shell keybindings (sourced from fzf's own shell integration):
+#   Ctrl+T — fuzzy-insert a file path at the current cursor position
+#   Ctrl+R — fuzzy-search shell history (overridden by atuin when installed)
+#   Alt+C  — fuzzy-cd into a subdirectory
 [[ -f ~/.fzf.zsh ]] && source ~/.fzf.zsh
 [[ -f /opt/homebrew/opt/fzf/shell/key-bindings.zsh ]] && \
   source /opt/homebrew/opt/fzf/shell/key-bindings.zsh
 
-# Catppuccin Mocha theme
+# Catppuccin Mocha colour theme — matches the Neovim / tmux colour scheme.
+# --border rounded  — use rounded box-drawing characters for the frame
+# --prompt / --pointer / --marker — Unicode glyphs for UI chrome
+# --height 50%      — occupy half the terminal height (not full-screen)
+# --layout reverse  — show results from top-to-bottom (most relevant at top)
 export FZF_DEFAULT_OPTS="
   --color=bg+:#313244,bg:#1e1e2e,spinner:#f5e0dc,hl:#f38ba8
   --color=fg:#cdd6f4,header:#f38ba8,info:#cba6f7,pointer:#f5e0dc
@@ -308,13 +919,21 @@ export FZF_DEFAULT_OPTS="
   --border rounded --prompt '❯ ' --pointer '▶' --marker '✔'
   --height 50% --layout reverse
 "
-# Use fd for file search — respects .gitignore, shows hidden files
+
+# fd is used as the file finder backend for fzf:
+# --hidden        — include dotfiles
+# --follow        — follow symlinks
+# --exclude .git  — skip .git directories
 export FZF_DEFAULT_COMMAND='fd --type f --hidden --follow --exclude .git'
 export FZF_CTRL_T_COMMAND="$FZF_DEFAULT_COMMAND"
 export FZF_ALT_C_COMMAND='fd --type d --hidden --follow --exclude .git'
 
-# Fuzzy git log browser — preview full diff for each commit
-# Usage: fglog → pick commit → prints SHA (pipe or use interactively)
+# fglog — fuzzy git log browser.
+# Shows one-line commit log in fzf; the right pane shows the full diff
+# for the highlighted commit. Press Enter to print the SHA (useful for
+# piping into git show, git cherry-pick, etc.).
+# Usage: fglog
+#        git cherry-pick $(fglog)
 fglog() {
   git log --oneline --color=always | \
     fzf --ansi --preview 'git show --color=always {1}' \
@@ -322,36 +941,344 @@ fglog() {
     awk '{print $1}'
 }
 
-# Fuzzy cd — jump into any subdirectory from current location
-# Usage: fcd → pick dir → cd into it
+# fcd — fuzzy cd into any subdirectory of the current location.
+# Preview pane shows the first level of the selected directory.
+# Usage: fcd
 fcd() {
   local dir
   dir=$(fd --type d --hidden --exclude .git | \
     fzf --preview 'eza --tree --level=1 --icons {}') && cd "$dir"
 }
 
-# Fuzzy kill — list processes, pick one, kill -9 it
-# Usage: fkill → pick process → killed
+# fkill — fuzzy process killer.
+# Lists all processes in fzf; selecting one sends SIGKILL.
+# Usage: fkill   (select process, press Enter)
 fkill() {
   local pid
   pid=$(ps aux | fzf --header='Select process to kill' | awk '{print $2}')
   [[ -n "$pid" ]] && kill -9 "$pid" && echo "Killed $pid"
 }
 
+# fenv — fuzzy env var picker. Copies the VALUE of the selected
+# variable to the macOS clipboard.
+# Usage: fenv   (pick a var, its value is in clipboard)
+fenv() {
+  local val
+  val=$(env | sort | fzf --prompt='env> ' | cut -d= -f2-)
+  [[ -n "$val" ]] && echo "$val" | pbcopy && echo "Copied: $val"
+}
+
+# falias — fuzzy alias browser.
+# Lists all defined aliases; selecting one prints its expansion.
+# Useful for discovering aliases you defined but forgot.
+# Usage: falias
+falias() {
+  alias | fzf --prompt='alias> ' | sed 's/=/: /'
+}
+
+# fman — fuzzy man page picker.
+# Searches all installed man page topics; preview pane shows the first
+# 40 lines of the page. Press Enter to open in the full man pager.
+# Usage: fman
+fman() {
+  local page
+  page=$(man -k . 2>/dev/null | fzf --prompt='man> ' \
+    --preview 'echo {} | awk "{print \$1}" | xargs man 2>/dev/null | head -40' | \
+    awk '{print $1}')
+  [[ -n "$page" ]] && man "$page"
+}
+
+# fssh — fuzzy SSH host picker.
+# Reads Host entries from ~/.ssh/config (excluding wildcards) and opens
+# an SSH connection to the selected host.
+# Usage: fssh
+fssh() {
+  local host
+  host=$(grep -E "^Host " ~/.ssh/config 2>/dev/null | awk '{print $2}' | \
+    grep -v '\*' | fzf --prompt='ssh> ')
+  [[ -n "$host" ]] && ssh "$host"
+}
+
+# fbr — fuzzy branch checkout.
+# Lists all local and remote branches; preview pane shows the last few
+# commits on that branch. Press Enter to check it out.
+# Usage: fbr
+fbr() {
+  local branch
+  branch=$(git branch -a --color=always | grep -v '/HEAD\s' | \
+    fzf --ansi --preview 'git log --oneline --color=always $(echo {} | sed "s/.* //")' \
+        --preview-window=right:50% | \
+    sed 's/.* //' | sed 's|remotes/[^/]*/||')
+  [[ -n "$branch" ]] && git checkout "$branch"
+}
+
+# fstash — fuzzy stash picker.
+# Lists all stash entries; preview pane shows the stash diff.
+# Press Enter to apply the selected stash (non-destructive: stash stays).
+# Usage: fstash
+fstash() {
+  local stash
+  stash=$(git stash list | fzf --prompt='stash> ' \
+    --preview 'git stash show -p $(echo {} | cut -d: -f1)' \
+    --preview-window=right:60% | cut -d: -f1)
+  [[ -n "$stash" ]] && git stash apply "$stash"
+}
+
+
+# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+# DATA TOOLS: jq / yq
+# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+# jq — command-line JSON processor.
+# Install: brew install jq
+# Full docs: https://jqlang.github.io/jq/manual/
+#
+# Common patterns:
+#   curl api.example.com/users | jqp          — pretty-print response
+#   cat data.json | jq '.users[].name'         — extract a field
+#   cat data.json | jq 'select(.age > 30)'     — filter by condition
+#   cat data.json | jq '{name, email}'         — project specific keys
+if command -v jq &>/dev/null; then
+  alias jqp='jq .'                  # pretty-print: echo '{"a":1}' | jqp
+  alias jqk='jq "keys[]"'           # list top-level keys of an object
+  alias jql='jq "length"'           # array length or object key count
+
+  # jqb — pretty-print JSON with bat syntax highlighting.
+  # Useful for large payloads where you want colour in the pager.
+  # The filter arg defaults to . (identity) if not provided.
+  # Usage: curl api.example.com | jqb
+  #        jqb '.users' data.json
+  jqb() { jq -C "${1:-.}" | bat --language=json --paging=never; }
+
+  # jqf — fuzzy-search all key paths in a JSON file.
+  # Shows every dot-notation path (e.g. users.0.address.city) in fzf,
+  # then evaluates the selected path and prints its value.
+  # Usage: jqf data.json
+  #        curl api.example.com | jqf    (reads from stdin with -)
+  jqf() {
+    local file="${1:--}"
+    jq -r 'paths | join(".")' "$file" 2>/dev/null | \
+      fzf --prompt='jq path> ' | \
+      xargs -I{} jq ".{}" "$file"
+  }
+fi
+
+# yq — YAML, JSON, and TOML processor with jq-compatible syntax.
+# Install: brew install yq
+# Full docs: https://mikefarah.gitbook.io/yq/
+#
+# Common patterns:
+#   yqp config.yaml                        — pretty-print YAML
+#   yq '.spec.replicas' deployment.yaml    — extract a value
+#   yq '.spec.replicas = 3' deployment.yaml — set a value (in-place with -i)
+#   cat config.yaml | yqj                  — convert YAML to JSON
+if command -v yq &>/dev/null; then
+  alias yqp='yq .'          # pretty-print YAML: cat config.yaml | yqp
+  alias yqj='yq -o=json .'  # convert YAML → JSON: cat values.yaml | yqj
+  alias yqy='yq -o=yaml .'  # convert JSON → YAML: cat data.json | yqy
+fi
+
+
+# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+# BENCHMARKING / CODE TOOLS
+# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+# hyperfine — statistical command-line benchmarking.
+# Runs each command multiple times, warms up the cache, and reports
+# mean / stddev / min / max with a comparison table.
+# Install: brew install hyperfine
+# Usage: bench 'ls'                               — single command
+#        bench 'ls' 'eza'                         — compare two commands
+#        bench --warmup 5 'grep foo large.log'    — 5 warmup runs first
+#        bench --export-json results.json 'cmd'   — save results
+command -v hyperfine &>/dev/null && alias bench='hyperfine'
+
+# tokei — count lines of code, broken down by language.
+# Much faster than cloc. Skips .gitignore'd files automatically.
+# Install: brew install tokei
+# Usage: cloc                — summary for current project
+#        cloc src/           — specific directory
+#        cloc --sort lines   — sort by line count
+command -v tokei &>/dev/null && alias cloc='tokei'
+
+# just — modern task runner, Makefile replacement.
+# Recipes are defined in a `justfile` in the project root.
+# Advantages over make: no tab-indentation requirement, better error
+# messages, shell choice per recipe, and no implicit file targets.
+# Install: brew install just
+# Usage: j           — run default recipe
+#        jl          — list all recipes with descriptions
+#        j test      — run the 'test' recipe
+#        j deploy prod — run 'deploy' with argument
+if command -v just &>/dev/null; then
+  alias j='just'
+  alias jl='just --list'
+fi
+
+# zsh_time — measure real shell startup time (time-to-prompt).
+#
+# IMPORTANT: `zsh -i -c exit` is a misleading benchmark — it forces
+# zinit's async (wait lucid) plugins to fully load before exit, adding
+# several seconds that you never experience in real usage. The correct
+# measure is `zsh -c 'source ~/.zshrc'` which times only the synchronous
+# startup path — exactly what blocks the prompt from appearing.
+#
+# Run zsh_time after adding new plugins or evals to catch regressions.
+# Usage: zsh_time
+zsh_time() {
+  local cmd='source ~/.zshrc'
+  if command -v hyperfine &>/dev/null; then
+    echo "Measuring real startup (time-to-prompt)..."
+    hyperfine --warmup 3 --runs 10 "zsh -c '$cmd'" 2>&1
+    echo ""
+    echo "For a detailed breakdown of which function is slow, run:"
+    echo "  ZSH_PROFILE=1 zsh"
+  else
+    echo "Measuring real startup (time-to-prompt)..."
+    for i in {1..5}; do /usr/bin/time zsh -c "$cmd" 2>&1; done
+  fi
+}
+
+
+# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+# PRODUCTIVITY HACKS
+# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+# ppath — print PATH entries one per line with line numbers.
+# Makes it trivial to spot duplicates, wrong order, or missing entries.
+# Usage: ppath
+ppath() { echo "$PATH" | tr ':' '\n' | nl; }
+
+# greph — search your shell history with fzf.
+# More ergonomic than Ctrl+R when you want to scan visually,
+# or Ctrl+R is taken by atuin but you want a quick plain grep.
+# Usage: greph docker       greph "git commit"
+greph() {
+  history 1 | grep --color=always "${*:-}" | \
+    fzf --ansi --tac --no-sort | awk '{$1=""; print substr($0,2)}'
+}
+
+# notify — send a macOS desktop notification when a long command finishes.
+# Detects success vs failure from the exit code and plays a matching
+# system sound. Chain after slow commands: sleep 60 && notify "backup done"
+# Usage: make build && notify "build done"
+#        notify "deploy finished"   (at end of any command chain)
+notify() {
+  local code=$?
+  local msg="${*:-Done}"
+  if [[ $code -eq 0 ]]; then
+    osascript -e "display notification \"$msg\" with title \"✓ Success\" sound name \"Glass\""
+  else
+    osascript -e "display notification \"$msg (exit $code)\" with title \"✗ Failed\" sound name \"Basso\""
+  fi
+}
+
+# epoch — print the current Unix timestamp.
+# fromepoch — convert a Unix timestamp to a human-readable date.
+# Usage: epoch                     → 1712345678
+#        fromepoch 1712345678      → Tue Apr  5 22:54:38 IST 2026
+epoch()     { date +%s; }
+fromepoch() { date -r "$1"; }
+
+# b64 / b64d — base64 encode / decode a string.
+# Usage: b64 "hello world"         → aGVsbG8gd29ybGQ=
+#        b64d "aGVsbG8gd29ybGQ="  → hello world
+b64()  { echo -n "$1" | base64; }
+b64d() { echo -n "$1" | base64 -d && echo; }
+
+# urlencode / urldecode — percent-encode / decode a string.
+# Usage: urlencode "hello world"     → hello%20world
+#        urldecode "hello%20world"   → hello world
+urlencode() { python3 -c "import urllib.parse,sys; print(urllib.parse.quote(sys.argv[1]))" "$1"; }
+urldecode() { python3 -c "import urllib.parse,sys; print(urllib.parse.unquote(sys.argv[1]))" "$1"; }
+
+# jwt — decode and pretty-print a JWT token's payload.
+# Reads from argument or falls back to clipboard if no arg given.
+# Does NOT verify the signature — for inspection only.
+# Usage: jwt eyJhbGci...
+#        jwt                        (decodes whatever is in clipboard)
+jwt() {
+  local token="${1:-$(pbpaste)}"
+  echo "$token" | cut -d. -f2 | base64 -d 2>/dev/null | jq .
+}
+
+# sha256 / sha1 — file checksum shorthands.
+# macOS uses `shasum` rather than `sha256sum` (Linux).
+# Usage: sha256 firmware.bin        sha1 archive.tar.gz
+sha256() { shasum -a 256 "$@"; }
+sha1()   { shasum -a 1   "$@"; }
+
+# sslcheck — show SSL certificate validity dates for a domain.
+# Quick way to see when a cert expires without opening a browser.
+# Usage: sslcheck github.com        sslcheck api.example.com
+sslcheck() {
+  echo | openssl s_client -servername "$1" -connect "$1:443" 2>/dev/null \
+    | openssl x509 -noout -subject -dates
+}
+
+# headers — fetch and display HTTP response headers with bat highlighting.
+# Usage: headers https://github.com
+#        headers api.example.com/users
+headers() { curl -sI "$1" | bat --language=http --paging=never; }
+
+# isup — check whether a URL returns a successful HTTP status.
+# Times out after 5 seconds so it doesn't hang on dead hosts.
+# Usage: isup github.com            isup https://my-api.example.com/health
+isup() {
+  local code
+  code=$(curl -s -o /dev/null -w "%{http_code}" --max-time 5 "$1")
+  [[ $code -lt 400 ]] \
+    && echo "✓ $1 is up (HTTP $code)" \
+    || echo "✗ $1 is down (HTTP $code)"
+}
+
+# countdown — count down N seconds with a live display.
+# Optionally sends a macOS notification when it reaches zero.
+# Usage: countdown 30               countdown 60 "build ready"
+countdown() {
+  local n="${1:-10}" msg="${2:-}"
+  for ((i=n; i>=0; i--)); do
+    printf "\r  %02d " "$i"
+    sleep 1
+  done
+  echo ""
+  [[ -n "$msg" ]] && notify "$msg"
+}
+
+# stopwatch — measure elapsed time between start and Enter key.
+# Usage: stopwatch    (press Enter to stop)
+stopwatch() {
+  local start end
+  start=$(date +%s)
+  echo "Stopwatch started — press Enter to stop."
+  read -r
+  end=$(date +%s)
+  printf "Elapsed: %ds\n" $((end - start))
+}
+
 # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 # UTILITY FUNCTIONS
 # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-# mkdir + cd in one step
-# Usage: mkcd my-project
+# mkcd — create a directory and immediately cd into it.
+# Equivalent to: mkdir -p foo && cd foo
+# Usage: mkcd my-new-project
+#        mkcd deep/nested/path
 mkcd() { mkdir -p "$1" && cd "$1"; }
 
-# Backup file with timestamp — non-destructive
-# Usage: backup config.yaml  →  config.yaml.bak.20260405_143000
+# backup — copy a file with a timestamped suffix.
+# Non-destructive alternative to overwriting when testing config changes.
+# The timestamp is YYYYmmdd_HHMMSS so backups sort chronologically.
+# Usage: backup nginx.conf          → nginx.conf.bak.20260401_153000
+#        backup ~/.zshrc            → ~/.zshrc.bak.20260401_153000
 backup() { cp "$1" "${1}.bak.$(date +%Y%m%d_%H%M%S)"; }
 
-# Universal archive extractor — handles any format
+# extract — universal archive extractor.
+# When ouch is installed (see MODERN TOOL REPLACEMENTS) this function
+# is overridden with ouch which handles even more formats automatically.
+# This fallback handles the most common formats without any extra tools.
 # Usage: extract archive.tar.gz
+#        extract firmware.zip
 extract() {
   case "$1" in
     *.tar.bz2) tar xjf "$1"   ;;
@@ -367,12 +1294,17 @@ extract() {
   esac
 }
 
-# Show which process is using a port
+# whichport — show which process is listening on a port.
+# Uses lsof to inspect all open internet connections and filters
+# by port number. Shows PID, command, and user.
 # Usage: whichport 8080
+#        whichport 5432     — check if postgres is running
 whichport() { lsof -i ":$1"; }
 
-# Pretty-print JSON in nvim with syntax highlighting
-# Usage: json '{"key": "value"}'  or  curl ... | json
+# json — pretty-print and open JSON in nvim with syntax highlighting.
+# Detects whether input is coming from a pipe (stdin) or as an argument.
+# Usage: json '{"key": "value"}'
+#        curl https://api.example.com/users | json
 json() {
   if [[ -t 0 ]]; then
     echo "$1" | python3 -m json.tool | nvim -c 'set ft=json' -
@@ -381,40 +1313,181 @@ json() {
   fi
 }
 
-# Spin up a quick HTTP server in the current directory
-# Usage: serve        →  http://localhost:8000
-#        serve 3000   →  http://localhost:3000
+# serve — start a one-liner HTTP server in the current directory.
+# Useful for testing static files, sharing a local directory over LAN,
+# or previewing built HTML without a full dev server.
+# Usage: serve           → http://localhost:8000
+#        serve 3000      → http://localhost:3000
 serve() { python3 -m http.server "${1:-8000}"; }
 
-# Weather in terminal
-# Usage: weather          →  local weather
-#        weather London   →  weather for London
+# weather — fetch a weather forecast in the terminal via wttr.in.
+# wttr.in returns an ANSI-coloured 3-day forecast with icons.
+# Usage: weather                — auto-detect location
+#        weather London         — specific city
+#        weather "New York"     — city with space
+#        weather London?format=3 — one-line compact format
 weather() { curl "wttr.in/${1:-}"; }
 
-# Compile and run a single C file (no Makefile needed)
+# crun — compile and run a single C source file without a Makefile.
+# Useful for quick experiments or testing a snippet in isolation.
+# Binary is written to /tmp so it doesn't clutter the working directory.
 # Usage: crun main.c
+#        crun experiment.c
 crun() { gcc -o /tmp/crun "$1" && /tmp/crun; }
 
-# Print sizeof a C type — useful for embedded work
-# Usage: csizeof uint32_t
+# csizeof — print the size in bytes of a C type.
+# Writes, compiles, and runs a minimal C program on-the-fly.
+# Particularly useful in embedded work where sizeof matters for
+# packing structs and mapping memory-mapped register layouts.
+# Usage: csizeof uint32_t    → 4
+#        csizeof "struct { char a; int b; }"    → shows padding
 csizeof() {
   printf '#include <stdio.h>\n#include <stdint.h>\nint main(){printf("%%zu\\n",sizeof(%s));}' "$1" \
     | gcc -x c - -o /tmp/csizeof && /tmp/csizeof
 }
 
-# Show the 20 largest files under current directory
-bigfiles() { du -ah . | sort -rh | head -20; }
+# bigfiles — show the largest files/directories under the current path.
+# Uses dust (visual bar chart) if installed, falls back to du + sort.
+# Usage: bigfiles
+bigfiles() {
+  if command -v dust &>/dev/null; then
+    dust -n 20
+  else
+    du -ah . | sort -rh | head -20
+  fi
+}
 
-# git clone + immediately cd into the repo
+# gclone — git clone + cd into the repo in one step.
+# Saves the manual cd after cloning. Uses basename to strip .git suffix.
 # Usage: gclone https://github.com/user/repo
+#        gclone git@github.com:user/repo.git
 gclone() { git clone "$1" && cd "$(basename "$1" .git)"; }
+
+
+# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+# ALIASES: GITHUB CLI (gh)
+# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+# Install: brew install gh   then: gh auth login
+# The gh CLI authenticates via OAuth token stored in the keychain,
+# so all commands work without manually handling tokens.
+if command -v gh &>/dev/null; then
+
+  # ── Pull Requests ──────────────────────────────────
+  alias ghpr='gh pr create'        # open a PR for the current branch (prompts for title/body)
+  alias ghprl='gh pr list'         # list all open PRs in the repo
+  alias ghprv='gh pr view --web'   # open the current branch's PR in the browser
+  alias ghprc='gh pr checkout'     # checkout a PR locally by number: ghprc 42
+  alias ghprs='gh pr status'       # show status of PRs you authored, assigned, or mentioned in
+  alias ghprm='gh pr merge'        # merge the current PR (prompts for merge strategy)
+
+  # ── Issues ────────────────────────────────────────
+  alias ghiss='gh issue list'      # list open issues
+  alias ghissc='gh issue create'   # create a new issue (prompts interactively)
+
+  # ── CI / Actions ──────────────────────────────────
+  alias ghrun='gh run list'        # list recent workflow runs
+  alias ghrw='gh run watch'        # watch a running workflow in real-time: ghrw <run-id>
+
+  # ── Releases ──────────────────────────────────────
+  alias ghrl='gh release list'     # list all releases
+
+  # ── Repo management ───────────────────────────────
+  alias ghrc='gh repo clone'       # clone using gh auth (no SSH key needed): ghrc user/repo
+  alias ghrf='gh repo fork --clone' # fork a repo and clone it locally in one step
+  alias ghbrowse='gh browse'       # open the current repo in the browser
+
+  # ── GitHub Copilot CLI ────────────────────────────
+  # Requires: gh extension install github/gh-copilot
+  # ghcs — suggest a shell command from a plain-English description.
+  #         Usage: ghcs "list all docker containers sorted by memory"
+  # ghce — explain what a shell command does in plain English.
+  #         Usage: ghce "git rebase -i HEAD~3"
+  if gh extension list 2>/dev/null | grep -q 'gh-copilot'; then
+    alias ghcs='gh copilot suggest'
+    alias ghce='gh copilot explain'
+  fi
+fi
+
+
+# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+# NETWORK UTILITIES
+# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+alias myip='curl -s ifconfig.me && echo'     # print your public (WAN) IP address
+alias localip='ipconfig getifaddr en0'       # print LAN IP on the Wi-Fi interface (macOS)
+alias localip1='ipconfig getifaddr en1'      # print LAN IP on the Ethernet interface (macOS)
+alias ports='lsof -iTCP -sTCP:LISTEN -n -P'  # list all processes with open TCP listening ports
+alias flushdns='sudo dscacheutil -flushcache && sudo killall -HUP mDNSResponder'  # macOS DNS cache flush
+alias pingg='ping -c 5 8.8.8.8'             # quick 5-packet connectivity test to Google DNS
+
+# connections — show all open network connections matching a pattern.
+# Useful to see which local processes are talking to a remote host.
+# Usage: connections github.com
+#        connections 443          — all HTTPS connections
+connections() { lsof -i | grep "$1"; }
+
+# portscan — scan all TCP ports on a remote host.
+# Requires nmap (brew install nmap). Falls back with a helpful message
+# if nmap isn't installed.
+# Usage: portscan 192.168.1.1
+#        portscan example.com
+portscan() { nmap -sT -p- --open "$1" 2>/dev/null || echo "nmap not installed (brew install nmap)"; }
+
+
+# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+# CLIPBOARD  (macOS)
+# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+# cpy — copy to clipboard from argument or stdin.
+# Detects whether it's being called interactively or in a pipe.
+# Usage: cpy "some text"              — copy a string
+#        cpy < file.txt               — copy file contents
+#        curl api.example.com | cpy   — copy command output
+cpy() {
+  if [[ -t 0 ]]; then
+    echo -n "$1" | pbcopy && echo "Copied."
+  else
+    pbcopy && echo "Copied from stdin."
+  fi
+}
+
+# cpypwd — copy the absolute path of the current directory to clipboard.
+# Useful when you need to paste the path into another app or terminal.
+alias cpypwd='echo -n "$PWD" | pbcopy && echo "Copied path."'
+
+# cbpaste — paste clipboard content to stdout.
+# Pipe-friendly: cbpaste | grep foo | ...
+alias cbpaste='pbpaste'
+
+
+# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+# HOMEBREW
+# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+# All aliases are guarded — if brew isn't installed they're not set.
+if command -v brew &>/dev/null; then
+  # brewup — full maintenance cycle: fetch new formulae, upgrade all
+  # installed packages, then remove old versions and download cache.
+  alias brewup='brew update && brew upgrade && brew cleanup'
+
+  alias brewls='brew list'                     # list all installed formulae and casks
+  alias brewin='brew install'                  # install a formula: brewin ripgrep
+  alias brewrm='brew uninstall'                # uninstall a formula: brewrm ripgrep
+  alias brewi='brew info'                      # show formula details, deps, options: brewi bat
+  alias brewsearch='brew search'               # search available formulae: brewsearch fuzzy
+  alias brewdeps='brew deps --tree --installed' # show dependency tree of all installed packages
+  alias brewdoc='brew doctor'                  # diagnose Homebrew installation issues
+  alias brewleaves='brew leaves'               # show only top-level packages (those not required by others)
+fi
+
 
 # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 # PROMPT POSITIONING
 # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-# Ctrl+L — push prompt to middle of terminal instead of full clear.
-# Previous output stays in scrollback (scroll up to see it).
-# Prompt lands at vertical center so you have breathing room.
+# Ctrl+L normally clears the screen and moves the prompt to the top.
+# This binding instead pushes the prompt to the vertical MIDDLE of
+# the terminal, printing blank lines above it. Previous output remains
+# in the scrollback buffer — scroll up to see it. This gives breathing
+# room without losing context, which is useful during long sessions.
 _prompt_to_middle() {
   local half=$(( LINES / 2 ))
   printf '\n%.0s' {1..$half}
@@ -423,37 +1496,41 @@ _prompt_to_middle() {
 zle -N _prompt_to_middle
 bindkey '^L' _prompt_to_middle
 
+
 # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 # LOG VIEWING
 # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-# lnav — Log file Navigator. Auto-detects log format (syslog, nginx,
-# apache, json, journald) and renders with syntax highlighting.
-# Supports filtering, regex search, SQL queries, and multi-file tailing.
-# Only needs to be installed LOCALLY — remote server just runs tail -f.
+# lnav — Log Navigator. Auto-detects format (syslog, nginx, apache,
+# JSON, journald) and renders it with syntax highlighting.
+# Supports filtering, regex search, and SQL queries over log data.
+# Install: brew install lnav
 #
 # Local usage:
-#   log /var/log/nginx/access.log   →  open in lnav TUI
-#   log *.log                       →  tail multiple files together
-#   journalctl -f | lnav            →  live systemd journal
+#   log /var/log/nginx/access.log   — open in lnav TUI
+#   log *.log                       — tail multiple files simultaneously
+#   journalctl -f | lnav            — live systemd journal stream
 #
 # lnav keybindings (inside TUI):
-#   /        →  regex search
-#   ;        →  SQL query mode (SELECT * FROM log WHERE ...)
-#   :filter-in <pattern>   →  only show matching lines
-#   :filter-out <pattern>  →  hide matching lines
-#   q        →  quit
-
+#   /                       — regex search across visible lines
+#   ;                       — SQL query mode: SELECT * FROM log WHERE level='error'
+#   :filter-in <pattern>    — show only lines matching pattern
+#   :filter-out <pattern>   — hide lines matching pattern
+#   e / E                   — jump to next / previous error
+#   TAB                     — cycle between open log files
+#   q                       — quit
 if command -v lnav &>/dev/null; then
   alias log='lnav'
 else
-  # Fall back to bat syntax highlighting for local log files
+  # Fallback when lnav isn't installed — bat still adds highlighting
+  # for common log patterns (timestamps, ERROR/WARN/INFO levels).
   alias log='bat --paging=never --language=log'
 fi
 
-# sshlog — tail a remote log file with local lnav rendering
-# The remote server only needs to run `tail -f`, no lnav needed there.
-# Usage: sshlog user@server /var/log/nginx/access.log
-#        sshlog prod-web /var/log/app/error.log
+# sshlog — stream a remote log file into local lnav for rendering.
+# The remote server only needs `tail -f` — no lnav installation needed there.
+# All the rich TUI, filtering, and SQL query features work locally.
+# Usage: sshlog user@prod-web /var/log/nginx/access.log
+#        sshlog prod-db /var/log/postgresql/postgresql.log
 sshlog() {
   if [[ $# -lt 2 ]]; then
     echo "Usage: sshlog <host> <logfile>"
@@ -462,10 +1539,11 @@ sshlog() {
   ssh "$1" "tail -f $2" | lnav
 }
 
-# sshcat — view a remote log file once (no follow) with bat highlighting
-# Useful for inspecting archived logs without a full TUI session.
+# sshcat — view a remote log file once (no follow) with bat highlighting.
+# Better than plain `ssh host cat file` because bat adds syntax colouring
+# for log levels, timestamps, and stack traces.
 # Usage: sshcat user@server /var/log/syslog
-#        sshcat prod-db /var/log/postgresql/postgresql.log
+#        sshcat prod-db /var/log/app/error.log.2026-04-01
 sshcat() {
   if [[ $# -lt 2 ]]; then
     echo "Usage: sshcat <host> <logfile>"
@@ -474,9 +1552,11 @@ sshcat() {
   ssh "$1" "cat $2" | bat --language=log
 }
 
-# sshj — tail remote systemd journal with lnav rendering
-# Usage: sshj user@server               →  all journal entries
-#        sshj user@server nginx         →  journal for specific unit
+# sshj — tail the systemd journal on a remote host into local lnav.
+# Optionally filter to a single systemd unit (service name).
+# Usage: sshj user@server              — all journal entries
+#        sshj user@server nginx        — journal for nginx.service only
+#        sshj prod-api myapp           — filter to myapp unit
 sshj() {
   if [[ $# -lt 1 ]]; then
     echo "Usage: sshj <host> [unit]"
@@ -487,58 +1567,158 @@ sshj() {
   ssh "$1" "journalctl -f $unit_filter" | lnav
 }
 
+
 # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 # ELITE TOOLS
 # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+# These tools hook into the shell via eval. They must load AFTER all
+# aliases are defined (so they can wrap or extend them) and BEFORE
+# the prompt (so they can modify PS1 if needed). The order here is
+# also intentional: zoxide after direnv so the cd alias wins.
 
-# zoxide — smarter cd that learns your most-visited directories
-# After a few days of use, `z proj` jumps to ~/dev/my-project
-# `cd` is aliased to `z` so existing muscle memory still works
+# zoxide — smarter cd that learns your directory visit frequency.
+# After a few days of normal use, `z proj` jumps directly to
+# ~/dev/my-project without typing the full path. The `cd` alias
+# means existing muscle memory works unchanged — it just gets smarter.
+# `zi` opens an fzf picker of your top directories if the query is ambiguous.
+# Install: brew install zoxide
 if command -v zoxide &>/dev/null; then
   eval "$(zoxide init zsh)"
-  alias cd='z'
+  alias cd='z'   # z keeps the cd interface, adds frecency-based resolution
 fi
 
-# direnv — loads/unloads env vars when you enter/leave a directory
-# Create a .envrc file in any project: echo 'export API_KEY=...' > .envrc
-# then `direnv allow` — vars load on cd in, unload on cd out
+# direnv — per-directory environment variable management.
+# Create a .envrc in any project directory with your env vars:
+#   echo 'export DATABASE_URL=postgres://localhost/mydb' > .envrc
+#   direnv allow        — approve the file (one-time, per change)
+# When you cd into the directory the vars are loaded; when you cd out
+# they are unloaded. Works perfectly with uv, mise, and virtualenvs.
+# Install: brew install direnv
 if command -v direnv &>/dev/null; then
   eval "$(direnv hook zsh)"
 fi
 
-# thefuck — press Esc twice to correct your last command
-# e.g. `got test` → suggest `go test`
+# thefuck — corrects your last mistyped command.
+# Press Esc twice (or type `fuck`) to apply the suggested correction.
+# Examples: `gti push` → `git push`   `got test` → `go test`
+# Install: brew install thefuck
 if command -v thefuck &>/dev/null; then
   eval "$(thefuck --alias)"
 fi
 
-# atuin — replaces Ctrl+R with a beautiful searchable history
-# Syncs history across machines if you set up an atuin account
-# Ctrl+R → full-screen history search with timestamps and exit codes
+# atuin — replaces the default Ctrl+R history search with a full-screen
+# TUI showing timestamps, exit codes, and host (for sync setups).
+# Optionally syncs history across machines via an atuin server (self-host
+# or atuin.sh). History is stored encrypted end-to-end.
+# Install: brew install atuin
+# Setup sync: atuin register / atuin login / atuin sync
 if command -v atuin &>/dev/null; then
   eval "$(atuin init zsh)"
 fi
 
-# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-# AUTO TMUX
-# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-# On every new terminal: attach to session 'main' or create it.
-# Skipped if:
-#   - already inside tmux ($TMUX is set)
-#   - non-interactive shell (scripts, CI)
-#   - stdin is not a terminal
-if command -v tmux &>/dev/null && [[ -z "$TMUX" ]] && [[ -t 0 ]]; then
-  tmux attach -t main 2>/dev/null || tmux new-session -s main
+# mise — universal runtime version manager.
+# Single replacement for pyenv, nvm, goenv, rbenv, sdkman, etc.
+# Reads .mise.toml or .tool-versions files in each project directory
+# and activates the correct runtime version automatically on cd.
+# Global defaults: mise use --global node@lts python@3.12
+# Per-project: cd myproject && mise use node@20 python@3.11
+# List installed: mise ls
+# Install: brew install mise
+if command -v mise &>/dev/null; then
+  eval "$(mise activate zsh)"
 fi
+
+# yazi — terminal file manager with shell cd-on-quit integration.
+# The `ya` wrapper saves the last directory yazi was in when you quit,
+# then cd's the shell into it. This makes yazi a full navigation tool,
+# not just a viewer. Use it as a visual alternative to fcd.
+#
+# Keybindings inside yazi:
+#   h / l       — navigate into/out of directory
+#   j / k       — move selection up/down
+#   Enter       — open file with default handler
+#   y           — yank (copy) selected file
+#   p           — paste
+#   d           — move to trash
+#   /           — search by filename
+#   q           — quit (and cd to current dir)
+# Install: brew install yazi
+if command -v yazi &>/dev/null; then
+  ya() {
+    local tmp cwd
+    tmp=$(mktemp -t "yazi-cwd.XXXXXX")
+    yazi "$@" --cwd-file="$tmp"
+    cwd=$(cat -- "$tmp")
+    [[ -n "$cwd" && "$cwd" != "$PWD" ]] && cd "$cwd"
+    rm -f -- "$tmp"
+  }
+fi
+
+# navi — interactive cheatsheet and snippet tool.
+# Press Ctrl+G at any point to open a fuzzy-searchable list of commands
+# with descriptions and variable placeholders. Select one and navi
+# inserts it at the cursor with placeholders highlighted for editing.
+# Add community cheatsheets: navi repo add denisidoro/cheats
+# Add your own:              navi repo add <github-user>/<repo>
+# Install: brew install navi
+if command -v navi &>/dev/null; then
+  eval "$(navi widget zsh)"
+fi
+
+
+# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+# TMUX
+# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+# tmux sessions persist after terminal close. Always work inside a
+# session so you never lose running processes to window accidents.
+
+# tq — detach from the current tmux session without killing it.
+# The session stays alive in the background; re-attach with ts or tn.
+alias tq='tmux detach'
+
+# tkill — kill the current tmux session entirely.
+# All windows and panes in the session are destroyed.
+alias tkill='tmux kill-session'
+
+# ts — attach to a session named after the current directory, or create
+# a new one if it doesn't exist. The -A flag means "attach if exists".
+# Usage: ts    — from ~/dev/myproject creates/attaches session "myproject"
+ts() {
+  tmux new-session -A -s "$(basename "$PWD")" -c "$PWD"
+}
+
+# tn — attach to or create a named tmux session.
+# Usage: tn work       tn dotfiles       tn scratch
+tn() {
+  [[ -z "$1" ]] && { echo "Usage: tn <name>"; return 1; }
+  tmux new-session -A -s "$1"
+}
+
+# zshr — reload the zshrc in the current shell without opening a new one.
+# Useful after editing this file to apply changes immediately.
+alias zshr='source ~/.zshrc'
+
 
 # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 # STARSHIP PROMPT
 # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-# Config: dotfiles/zsh/starship.toml → deployed to ~/.config/starship.toml
-# To change prompt: edit starship.toml, run bash install.sh, open new terminal.
+# starship is a cross-shell prompt written in Rust.
+# It shows: directory, git branch/status, language versions, exit code,
+# command duration, and more — all configurable per-module.
+#
+# Config file: dotfiles/zsh/starship.toml → deployed to ~/.config/starship.toml
+# Apply config changes: edit starship.toml → bash install.sh → open new terminal
 # Docs: https://starship.rs/config/
+#
+# Must be initialised LAST — any prompt-modifying `eval` before this
+# (thefuck, atuin) will be overwritten by starship's PS1.
 if command -v starship &>/dev/null; then
   eval "$(starship init zsh)"
 else
   print -P "%F{yellow}⚠ starship not found — run: brew install starship%f"
 fi
+
+# ── Profiling output ─────────────────────────────────────
+# Must be the very last line — prints results after everything else loaded.
+# Usage: ZSH_PROFILE=1 zsh     (open a new shell, see the ranked table)
+[[ -n "$ZSH_PROFILE" ]] && zprof
