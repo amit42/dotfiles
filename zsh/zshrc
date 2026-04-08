@@ -119,13 +119,22 @@ source "${ZINIT_HOME}/zinit.zsh"
 #                              filtered by the text already typed
 #   zsh-you-should-use       — prints a reminder when you type a
 #                              command that has a defined alias
+# fast-syntax-highlighting must load AFTER zsh-history-substring-search.
+# FSH wraps all ZLE widgets at load time — if history-substring-search
+# hasn't registered its widgets yet, FSH doesn't know about them and
+# prints "unhandled ZLE widget" warnings on every shell open.
+# Splitting into two blocks guarantees the load order.
 zinit wait lucid light-mode for \
   Aloxaf/fzf-tab \
   zsh-users/zsh-autosuggestions \
   zsh-users/zsh-completions \
-  zdharma-continuum/fast-syntax-highlighting \
   zsh-users/zsh-history-substring-search \
   MichaelAquilina/zsh-you-should-use
+
+# FSH loads in a second wait block so history-substring-search widgets
+# are already registered before FSH wraps them.
+zinit wait lucid light-mode for \
+  zdharma-continuum/fast-syntax-highlighting
 
 # zsh-autosuggestions tuning
 # BUFFER_MAX_SIZE: stop suggesting when line is longer than 20 chars
@@ -1681,10 +1690,71 @@ alias tq='tmux detach'
 alias tkill='tmux kill-session'
 
 # ts — attach to a session named after the current directory, or create
-# a new one if it doesn't exist. The -A flag means "attach if exists".
+# a new one with 3 pre-configured windows:
+#   1. editor  — opens nvim in project root
+#   2. terminal — plain shell for running commands
+#   3. logs    — dedicated pane for tailing logs / lnav
+# If the session already exists, just attach (windows are left as-is).
 # Usage: ts    — from ~/dev/myproject creates/attaches session "myproject"
 ts() {
-  tmux new-session -A -s "$(basename "$PWD")" -c "$PWD"
+  local name
+  name="$(basename "$PWD")"
+  if tmux has-session -t "$name" 2>/dev/null; then
+    tmux attach-session -t "$name"
+  else
+    tmux new-session  -d -s "$name" -c "$PWD" -n "editor"   \; \
+      send-keys        "nvim ." Enter                         \; \
+      new-window      -n "terminal" -c "$PWD"                \; \
+      new-window      -n "logs"     -c "$PWD"                \; \
+      select-window   -t "$name:editor"                      \; \
+      attach-session  -t "$name"
+  fi
+}
+
+# clast — copy the output of the last command to the clipboard.
+# Uses a preexec hook to record the cursor row just before each command
+# runs, then captures the tmux pane content between that row and the
+# current cursor position (i.e. exactly the output, no prompt lines).
+#
+# Limitation: only works for output that fits in the visible pane.
+# For output that scrolled off, use tmux copy mode (prefix + [).
+# Only works inside a tmux session.
+#
+# Usage: clast          — copies last command's output
+#        clast | wc -l  — pipe the output instead
+_clast_row=0
+_clast_preexec() { _clast_row=$(tmux display-message -p '#{cursor_y}' 2>/dev/null || echo 0); }
+add-zsh-hook preexec _clast_preexec
+
+clast() {
+  if [[ -z "$TMUX" ]]; then
+    echo "Not in tmux. Next time: cmd | cpy"
+    return 1
+  fi
+  local cur=$(tmux display-message -p '#{cursor_y}')
+  local sed_start=$(( _clast_row + 2 ))   # skip the command line itself (1-indexed)
+  local sed_end=$(( cur ))                 # stop before the new prompt line
+  if (( sed_end < sed_start )); then
+    echo "No output captured."
+    return 1
+  fi
+  local out
+  out=$(tmux capture-pane -p | sed -n "${sed_start},${sed_end}p")
+  echo "$out" | pbcopy
+  echo "Copied $(( sed_end - sed_start + 1 )) lines."
+}
+
+# tls — list all tmux sessions with their window count and status.
+alias tls='tmux list-sessions 2>/dev/null || echo "No tmux sessions running."'
+
+# tswitch — fzf picker to jump between tmux sessions.
+# Press Enter on a session name to switch to it.
+# Usage: tswitch
+tswitch() {
+  local session
+  session=$(tmux list-sessions -F '#{session_name}' 2>/dev/null \
+    | fzf --prompt='tmux session> ' --height=10 --reverse)
+  [[ -n "$session" ]] && tmux switch-client -t "$session"
 }
 
 # tn — attach to or create a named tmux session.
@@ -1697,6 +1767,70 @@ tn() {
 # zshr — reload the zshrc in the current shell without opening a new one.
 # Useful after editing this file to apply changes immediately.
 alias zshr='source ~/.zshrc'
+
+
+# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+# STARTUP BANNER
+# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+# Shri Ram — braille art with a 256-color gradient.
+# divine blue sky → Ram's blue form → golden saffron earth.
+# Shown once per interactive shell (every new terminal/pane).
+if [[ -o interactive ]]; then
+  () {
+    local -a lines=(
+      '⠀⠀⠀⠈⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⢀⣀⣀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⣰⠟⠁⠀⠀'
+      '⠀⠀⠀⠀⠂⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⣀⣿⣿⣿⣧⡄⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⣸⡀⠀⠀⠀'
+      '⠂⠀⠀⠀⠀⡀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⣰⣿⣿⣿⣿⣿⣿⡆⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⡟⣷⠀⠀⠀'
+      '⠀⠀⠀⠀⠁⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⢀⣿⠩⢹⡙⠁⢸⣿⣧⡀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⣸⠃⢹⡇⠀⠀'
+      '⠀⠀⠀⠀⠀⠀⡀⠀⠀⣤⣤⣼⣶⣿⡆⠀⢸⣿⣾⣿⠻⣿⠷⣿⣿⠇⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⡟⠀⠀⢿⡄⠀'
+      '⠀⠀⠀⠀⠀⠀⠀⠀⠀⠙⠻⣿⣿⣿⡄⠀⢈⣿⡄⣰⣴⡀⢀⣿⣿⣇⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⢸⠇⠀⠀⠸⣧⠀'
+      '⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⢹⣿⣿⣿⣷⣽⣿⣿⣬⣉⣡⠞⢻⣿⣿⣤⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⢸⠀⠀⠀⠀⣿⡀'
+      '⠀⠀⠀⠀⠀⠀⠈⠀⠀⠀⠀⠘⣿⣿⠿⠻⣿⠛⣿⣇⠀⠀⠀⣼⣿⠈⠉⠑⠲⣄⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⡟⠀⠀⠀⠀⢸⡇'
+      '⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⢀⠞⠁⠀⠀⠹⣦⣻⣿⣆⠀⣠⣿⣿⠀⣠⢀⡀⠈⣆⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⢸⠁⠀⠀⠀⠀⣸⡇'
+      '⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⢀⡼⠀⠀⣰⡀⠀⠈⢻⣿⣏⠙⠋⣸⣿⣮⡏⠀⢳⠀⢸⡀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⡿⠀⠀⠀⠀⢠⣿⠀'
+      '⠀⠀⠀⠀⠀⠀⢀⠀⠀⠀⡿⢶⣤⣠⡏⠱⣄⣠⡀⠹⣿⣄⠘⣿⡿⢿⣰⣦⡏⠀⣈⣿⣆⠀⠀⠀⠀⠀⠀⠀⠈⢀⠇⠀⠀⠀⢠⣾⠃⠀'
+      '⠀⠀⠀⠀⠀⠀⠀⠀⢠⠞⠀⠀⢉⡿⢳⠀⠈⠚⠓⠒⢻⣿⣷⣿⠉⠉⠉⢹⠳⡾⠛⠁⠸⣄⣀⣀⡀⠀⠀⡀⠀⢸⠀⠀⠀⢠⣿⠇⠀⠀'
+      '⠀⠀⠀⠀⠀⠀⠄⠀⡞⠀⠀⣴⡋⠀⠀⢧⡀⠀⠀⠀⠘⢿⣿⡿⠷⣄⡀⡎⠀⠉⠢⣄⡀⠀⠀⠀⠉⠓⠦⢤⣀⣟⣀⣀⣤⣼⡟⠀⠀⠀'
+      '⠀⠀⠀⠀⠀⠀⠀⠀⢦⡀⠀⠀⠉⠓⠠⠬⢧⡤⠞⠛⢻⣿⡆⠀⠀⢈⣿⣧⣄⠀⠀⠀⠍⠒⠢⠄⠀⣀⣀⣀⣀⣿⣍⠀⣽⣿⣷⠀⠀⠀'
+      '⠀⠀⠀⠀⠀⠀⠀⠀⠀⠈⠓⠠⠠⠤⠤⠤⢿⣤⣤⣤⣴⣿⣤⣤⣴⣿⣿⣿⣿⠀⠀⠀⠀⡄⠀⠀⠀⠀⠀⠀⡞⠀⠈⠉⣿⡟⠁⠀⠀⠀'
+      '⠀⠀⢠⠤⠒⠂⢤⣤⡀⠀⠀⠀⠀⠀⠀⢠⣾⣿⣿⣿⠯⢏⣳⣾⣿⣿⣿⣿⡇⠀⠀⠀⠂⠀⠀⠀⠀⠀⠀⠀⠇⠀⠀⣼⡿⠀⠀⠀⠀⠀'
+      '⠀⠀⡼⠭⠭⢭⣿⣗⣿⣆⠀⠀⠀⠀⢀⣿⣿⣿⣿⡶⣾⣿⣿⣿⣿⣿⣿⣿⣇⠀⠀⠈⠀⠀⠄⠀⠀⠀⠀⢸⠀⠀⣸⣿⠁⠀⠀⠀⠀⠀'
+      '⠀⠀⣟⣒⣒⠠⡿⢭⣿⣿⣷⣄⡀⢀⣼⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⡿⣿⣿⡆⠀⠁⠀⠀⠀⠀⠀⠀⢀⡟⠀⢠⣿⠇⠀⠀⠀⠀⠀⠀'
+      '⠀⢸⣗⣒⣒⣹⡿⢾⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⠿⠻⣉⣴⣿⣿⢭⡒⢭⣱⡐⠀⠀⠀⠀⠀⠈⠁⢸⠃⠀⢸⡏⠀⠀⠀⠀⠀⠀⠀'
+      '⠀⠀⢹⡿⠭⠽⣿⣾⣿⣿⣿⣿⣿⣿⣿⣿⡿⣿⢟⣩⡠⢚⣿⣿⣿⣿⡶⠚⣩⠟⣇⡀⠀⠀⠀⠀⠄⠀⡜⠀⠀⣿⠇⠀⠀⠀⠀⠀⠀⠀'
+      '⠀⠀⢈⣯⢏⣙⣿⡻⣿⣿⣿⣿⣿⡿⠿⡭⠞⣡⠟⠋⣠⣾⣿⣿⣿⣿⢭⣭⡥⠔⢋⣗⠀⠀⠀⠀⠀⢰⡇⠀⠀⣿⠀⠀⠀⠀⠀⠀⠀⠀'
+      '⠀⠀⠀⠘⡿⢒⣺⡯⠿⠛⠛⠋⡹⠐⢋⡠⠊⣡⠴⣏⡽⠿⣿⣿⣿⠏⣀⡠⢤⣶⡫⣧⠀⠀⠀⠈⠀⡼⠀⠀⠀⣿⡄⠀⠀⠀⠀⠀⠀⠀'
+      '⠀⠀⠀⠀⠋⠉⠀⠀⠀⠀⢀⣰⠥⠒⠋⡴⣻⣄⣾⡉⢳⣤⠾⣿⣟⣋⡡⠔⠋⠸⠊⣸⠀⠀⠀⠂⢠⡇⠀⠀⠀⢸⡇⠀⠀⠀⠀⠀⠀⠀'
+      '⠀⠀⠀⠀⠀⠀⠀⠀⠀⣼⠁⠀⠀⠀⡠⠟⢁⡸⢛⠗⠛⣷⣴⣿⡟⠷⣤⣄⠀⡠⠜⢩⣧⠀⠀⠈⢸⠀⠀⠀⠀⠘⣿⠀⠀⠀⠀⠀⠀⠀'
+      '⠀⠀⠀⠀⠀⠀⠀⣠⢞⣹⡤⠤⠄⡊⠤⠒⠋⢀⢾⠀⡠⠛⣶⣿⣧⡀⠈⠑⢥⡀⡠⣿⢿⠀⠀⠀⡇⠀⠀⠀⠀⢸⡟⠀⠀⠀⠀⠀⠀⠀'
+      '⠀⠀⠀⠀⠀⢀⡸⠃⠀⠀⠀⠀⠈⠀⠀⢀⣤⡟⠀⠙⢳⡔⣿⠿⣈⠛⠷⣦⣤⡍⣚⡵⠛⣧⠀⣸⠇⠀⠀⠀⢀⣿⠃⠀⠀⠀⠀⠀⠀⠀'
+      '⠀⠀⠀⠀⢰⠟⢆⡀⠀⠀⠀⢀⡠⠄⠒⣩⠞⠀⢀⠔⠛⣿⣿⣦⡀⠉⠒⠤⣈⠉⡁⠤⠚⠹⡄⡟⠀⠀⠀⠀⣾⠏⠀⠀⠀⠀⠀⠀⠀⠀'
+      '⠀⠀⠀⠀⢰⡀⠀⠙⠒⠒⠒⠁⠀⡠⠊⡏⠀⠀⠸⠤⣼⡿⠉⣷⢌⡓⠢⠤⣀⡀⠀⠀⠀⠀⣿⠇⠀⠀⠀⣼⡏⠀⡀⢀⣠⣀⡤⠀⠀⠀'
+      '⠀⠀⠀⠀⢰⡷⡀⠀⠀⠀⣀⣴⣊⣠⠞⠀⠀⠀⠀⠀⠿⠁⠀⠈⢶⣾⠷⢦⡤⡉⠁⠐⠂⠈⣽⣧⡀⢀⣼⠟⠀⠀⡿⣿⠟⠁⠀⠀⠀⠀'
+      '⠀⠀⠀⠀⠈⢿⣟⠒⢚⡭⢀⣠⡴⠋⠀⠀⣀⣀⣤⣤⣄⣀⣀⣄⣀⣹⣦⣄⠙⠚⠷⢶⣶⣺⣿⡿⣷⣾⣯⣤⣤⣴⣷⣷⣤⣶⣿⣿⣿⣷'
+      '⠀⣠⣤⣴⣦⣶⣿⣭⣽⣾⣿⣿⣷⣿⣷⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣯⣿⣶⣦⣴⣿⣾⣤⣿⣿⣿⣿⣿⣿⣷⢿⡾⠽⣿⣿⣾⣿'
+      '⣾⣿⣿⣿⣿⣿⣿⣿⡟⠛⢻⣿⣿⣿⣾⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣻⣿⣿⣿⣿⠟⠻⣿⣿⣿⣿⣿⣿⣿⣿⣿⣮⣿⣟⣿'
+      '⣰⣿⣿⣿⣿⣿⣿⣿⠁⢀⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⡿⣧⣄⡀⠀⢙⣿⣿⣿⣿⣿⣿⣿⣿⡿⢽⣻'
+      '⣤⠿⣴⡿⣻⣿⣿⣿⣷⣿⣿⣿⣿⣿⣾⣿⣿⣿⣿⠿⠿⠿⠿⠿⠿⢿⣿⣿⣯⣙⣒⣺⣻⡿⠿⠿⠿⢦⣬⣿⡿⠛⠛⠋⠉⠉⢉⣍⠹⣏'
+      '⡽⠒⠛⠛⠋⠉⠉⠉⠙⠋⠉⠉⠁⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠁⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⣈⠿⡿⣂'
+    )
+    # Color gradient: deep blue (divine sky/Ram's form) → saffron/gold (sacred earth)
+    # Ram is traditionally depicted with neela varna (blue body) and saffron surroundings.
+    #   75-69  = deep royal blue  (sky, divine aura)
+    #   33-27  = bright-to-deep blue (Ram's form)
+    #   220-214 = gold to amber (transition, divine light)
+    #   208-202 = saffron (sacred, holy)
+    #   166-130 = deep saffron to burnt orange (earth)
+    #   94-88  = dark earth
+    local -a colors=(75 75 69 69 33 33 33 27 27 27 27 220 220 220 214 214 214 208 208 208 202 202 166 166 130 130 94 94 88 88 88 130 166 208 214)
+    local i=1
+    for line in "${lines[@]}"; do
+      printf "\033[38;5;${colors[$i]}m%s\033[0m\n" "$line"
+      (( i++ ))
+    done
+    printf "\n\033[38;5;220m%43s\033[0m\n" "🚩 जय श्री राम 🚩"
+  }
+fi
 
 
 # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
