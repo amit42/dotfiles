@@ -53,8 +53,8 @@ require("mason-tool-installer").setup({
     "black",              -- Python
     "isort",              -- Python imports
     "goimports",          -- Go (also adds missing imports)
-    "gofmt",              -- Go
-    "rustfmt",            -- Rust
+    -- gofmt ships with Go toolchain, not a Mason package
+    -- rustfmt ships with Rust toolchain (rustup), not a Mason package
     "google-java-format", -- Java
     "clang-format",       -- C / C++
     "prettier",           -- JS, TS, JSON, YAML, Markdown
