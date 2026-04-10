@@ -93,11 +93,12 @@ install_brew_pkg() {
 }
 
 install_apt_pkg() {
-  if check_cmd "$1"; then
-    warn "$1 already installed — skipping"
+  local cmd="$1" pkg="$2"
+  if check_cmd "$cmd" || dpkg -s "$pkg" &>/dev/null 2>&1; then
+    warn "$cmd already installed — skipping"
   else
-    log "Installing $1..."
-    sudo apt-get install -y "$2" && success "Installed $1"
+    log "Installing $cmd..."
+    sudo apt-get install -y "$pkg" && success "Installed $cmd"
   fi
 }
 
@@ -124,7 +125,7 @@ if [[ "$OS" == "mac" ]]; then
   fi
 elif [[ "$OS" == "linux" ]] || [[ "$OS" == "wsl" ]]; then
   install_apt_pkg fzf fzf
-  install_apt_pkg fd fd-find
+  install_apt_pkg fdfind fd-find
   install_apt_pkg rg ripgrep
   install_apt_pkg lnav lnav
   if ! check_cmd starship; then

@@ -40,9 +40,16 @@ base      = "#1e1e2e"
 [directory]
 style = "bold blue"
 format = "[$path]($style) "
-truncation_length = 3
-truncate_to_repo = true
-truncation_symbol = "…/"
+truncation_length = 4
+truncate_to_repo = false
+truncation_symbol = ""
+fish_style_pwd_dir_length = 1
+
+[directory.substitutions]
+"/mnt/c/Users/amit97.kumar" = ""
+"/mnt/c"                    = "C:"
+"/mnt/d"                    = "D:"
+"/mnt/e"                    = "E:"
 
 # ── Git ──────────────────────────────────────────────────
 [git_branch]

@@ -11,9 +11,10 @@
 -- So it survives config wipes
 local lazypath = vim.fn.stdpath("data") .. "/lazy/lazy.nvim"
 
--- vim.uv.fs_stat checks if path exists on disk
+-- vim.uv.fs_stat checks if path exists on disk (vim.uv = 0.10+, vim.loop = older)
 -- if lazy folder not found → first time setup → clone it
-if not vim.uv.fs_stat(lazypath) then
+local uv = vim.uv or vim.loop
+if not uv.fs_stat(lazypath) then
   vim.notify("Installing lazy.nvim, please wait...")
   vim.fn.system({
     "git",

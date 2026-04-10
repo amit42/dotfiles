@@ -1689,6 +1689,9 @@ alias tq='tmux detach'
 # All windows and panes in the session are destroyed.
 alias tkill='tmux kill-session'
 
+# tkillall — kill every tmux session on the server.
+alias tkillall='tmux kill-server'
+
 # ts — attach to a session named after the current directory, or create
 # a new one with 3 pre-configured windows:
 #   1. editor  — opens nvim in project root
@@ -1702,11 +1705,11 @@ ts() {
   if tmux has-session -t "$name" 2>/dev/null; then
     tmux attach-session -t "$name"
   else
-    tmux new-session  -d -s "$name" -c "$PWD" -n "editor"   \; \
-      send-keys        "nvim ." Enter                         \; \
+    tmux new-session  -d -s "$name" -c "$PWD" -n "editor" "zsh -ic 'nvim .; exec zsh'" \; \
       new-window      -n "terminal" -c "$PWD"                \; \
       new-window      -n "logs"     -c "$PWD"                \; \
-      select-window   -t "$name:editor"                      \; \
+      new-window      -n "cmd" -c "$PWD" "cmd.exe"           \; \
+      select-window   -t "$name:1"                           \; \
       attach-session  -t "$name"
   fi
 }
@@ -1786,6 +1789,47 @@ if [[ -o interactive ]]; then
   printf '\n'
 fi
 
+
+# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+# WSL
+# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+if grep -qi microsoft /proc/version 2>/dev/null; then
+
+  # Windows home — derive from the logged-in Windows username
+  WIN_USER=$(cmd.exe /c "echo %USERNAME%" 2>/dev/null | tr -d '\r')
+  WIN_HOME="/mnt/c/Users/$WIN_USER"
+
+  # Quick navigation to common Windows directories
+  alias wh="cd $WIN_HOME"
+  alias wdesk="cd $WIN_HOME/Desktop"
+  alias wdl="cd $WIN_HOME/Downloads"
+  alias wdocs="cd $WIN_HOME/Documents"
+
+  # open — launch a file or directory with its default Windows app.
+  # Works like macOS `open`: `open .` launches Explorer, `open file.pdf` opens in Acrobat, etc.
+  open() {
+    if [[ $# -eq 0 ]]; then
+      explorer.exe .
+    else
+      explorer.exe "$(wslpath -w "$1" 2>/dev/null || echo "$1")"
+    fi
+  }
+
+  # pbcopy / pbpaste — clipboard aliases matching macOS muscle memory.
+  # pbcopy: pipe into it   → echo "hello" | pbcopy
+  # pbpaste: pipe out of it → pbpaste | grep foo
+  alias pbcopy='clip.exe'
+  alias pbpaste='powershell.exe -NoProfile -Command Get-Clipboard'
+
+  # wpath — print the Windows-style path for the current (or given) directory.
+  # Useful for copying a path to paste into Windows apps or Explorer address bar.
+  # Usage: wpath             → C:\Users\amit97.kumar\Desktop
+  #        wpath ~/projects  → C:\Users\amit97.kumar\projects
+  wpath() {
+    wslpath -w "${1:-$PWD}"
+  }
+
+fi
 
 # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 # STARSHIP PROMPT
