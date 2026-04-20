@@ -119,6 +119,7 @@ if [[ "$OS" == "mac" ]]; then
     install_brew_pkg btop
     install_brew_pkg tldr
     install_brew_pkg lnav
+    install_brew_pkg golangci-lint
   else
     warn "Homebrew not found — skipping tool installs"
     warn "Install Homebrew from https://brew.sh then re-run"
