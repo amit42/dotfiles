@@ -66,7 +66,7 @@ M.setup_lint = function()
   -- Linters feed into vim.diagnostic — same display as LSP errors
   lint.linters_by_ft = {
     python     = { "ruff" },        -- ruff replaces flake8: same rules, much faster
-    go         = { "golangci_lint" },
+    go         = { "golangcilint" },
     sh         = { "shellcheck" },
     dockerfile = { "hadolint" },
   }
