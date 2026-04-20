@@ -1705,12 +1705,18 @@ ts() {
   if tmux has-session -t "$name" 2>/dev/null; then
     tmux attach-session -t "$name"
   else
+    # Build the session with core windows first
     tmux new-session  -d -s "$name" -c "$PWD" -n "editor" "zsh -ic 'nvim .; exec zsh'" \; \
       new-window      -n "terminal" -c "$PWD"                \; \
-      new-window      -n "logs"     -c "$PWD"                \; \
-      new-window      -n "cmd" -c "$PWD" "cmd.exe"           \; \
-      select-window   -t "$name:1"                           \; \
-      attach-session  -t "$name"
+      new-window      -n "logs"     -c "$PWD"
+
+    # WSL only: add a cmd.exe window for Windows interop
+    if grep -qi microsoft /proc/version 2>/dev/null; then
+      tmux new-window -t "$name" -n "cmd" -c "$PWD" "cmd.exe"
+    fi
+
+    tmux select-window   -t "$name:1" \; \
+         attach-session  -t "$name"
   fi
 }
 

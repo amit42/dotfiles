@@ -41,10 +41,10 @@ M.setup_conform = function()
       sh         = { "shfmt" },
     },
 
-    -- Synchronous format on save with a 500ms timeout
+    -- Synchronous format on save — 3s timeout to handle goimports/rustfmt cold starts
     -- lsp_fallback = true: if no conform formatter matches, defer to the LSP server
     format_on_save = {
-      timeout_ms   = 500,
+      timeout_ms   = 3000,
       lsp_fallback = true,
     },
   })
@@ -66,7 +66,7 @@ M.setup_lint = function()
   -- Linters feed into vim.diagnostic — same display as LSP errors
   lint.linters_by_ft = {
     python     = { "ruff" },        -- ruff replaces flake8: same rules, much faster
-    go         = { "golangcilint" },
+    go         = { "golangci_lint" },
     sh         = { "shellcheck" },
     dockerfile = { "hadolint" },
   }
