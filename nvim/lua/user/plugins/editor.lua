@@ -123,11 +123,6 @@ return {
           filesystem_watchers = {
             enable = true,               -- auto-refresh when files change on disk
           },
-          actions = {
-            refresh = {
-              enable = true,
-            },
-          },
           on_attach = function(bufnr)
             local api = require("nvim-tree.api")
             -- load all default mappings first
