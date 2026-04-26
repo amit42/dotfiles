@@ -120,6 +120,23 @@ return {
           git = {
             enable = true,               -- show git status in tree
           },
+          filesystem_watchers = {
+            enable = true,               -- auto-refresh when files change on disk
+          },
+          actions = {
+            refresh = {
+              enable = true,
+            },
+          },
+          on_attach = function(bufnr)
+            local api = require("nvim-tree.api")
+            -- load all default mappings first
+            api.config.mappings.default_on_attach(bufnr)
+            -- explicit refresh binding in case watcher misses something
+            vim.keymap.set("n", "R",
+              api.tree.reload,
+              { buffer = bufnr, noremap = true, silent = true, desc = "Refresh tree" })
+          end,
         })
   
         -- Toggle file explorer
