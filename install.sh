@@ -255,9 +255,14 @@ else
   warn "dotfiles/wezterm/wezterm.lua not found — skipping"
 fi
 
-# Ghostty reads ~/.config/ghostty/config
+# Ghostty: macOS app reads from ~/Library/Application Support/com.mitchellh.ghostty/
+# Linux/other reads from ~/.config/ghostty/config
 if [[ -f "$DOTFILES/ghostty/config" ]]; then
-  safe_copy "$DOTFILES/ghostty/config" "$CONFIG/ghostty/config"
+  if [[ "$OS" == "mac" ]]; then
+    safe_copy "$DOTFILES/ghostty/config" "$HOME/Library/Application Support/com.mitchellh.ghostty/config.ghostty"
+  else
+    safe_copy "$DOTFILES/ghostty/config" "$CONFIG/ghostty/config"
+  fi
 else
   warn "dotfiles/ghostty/config not found — skipping"
 fi
