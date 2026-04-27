@@ -255,6 +255,13 @@ else
   warn "dotfiles/wezterm/wezterm.lua not found — skipping"
 fi
 
+# Ghostty reads ~/.config/ghostty/config
+if [[ -f "$DOTFILES/ghostty/config" ]]; then
+  safe_copy "$DOTFILES/ghostty/config" "$CONFIG/ghostty/config"
+else
+  warn "dotfiles/ghostty/config not found — skipping"
+fi
+
 # ══════════════════════════════════════════════════════════
 # DONE
 # ══════════════════════════════════════════════════════════

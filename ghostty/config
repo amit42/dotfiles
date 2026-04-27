@@ -1,0 +1,10 @@
+# ╔═══════════════════════════════════════════════════════╗
+# ║  ghostty/config — managed via dotfiles               ║
+# ║  Edit: dotfiles/ghostty/config                       ║
+# ║  Install: bash install.sh                            ║
+# ╚═══════════════════════════════════════════════════════╝
+
+# Make left Option key send ESC+key (Meta) so tmux/vim Alt bindings work.
+# e.g. Alt+h/l for window switching, Alt-based nvim mappings.
+# Right Option keeps default macOS behaviour (special characters).
+macos-option-as-alt = left
