@@ -268,6 +268,10 @@ setopt SHARE_HISTORY
 setopt AUTO_CD
 setopt CORRECT
 
+# Deduplicate PATH — prevents duplicate entries when zshr is sourced
+# multiple times in the same session. typeset -U means "unique array".
+typeset -U path PATH
+
 # WORDCHARS controls which characters are treated as part of a "word"
 # for Ctrl+W (delete word) and Ctrl+Left/Right (jump word).
 # Removing / and . from the default set means those stop at path
@@ -446,6 +450,14 @@ tmpcd() {
 # Usage: dot
 alias dot='cd ~/Desktop/dotfiles/dotfiles'
 
+# dotup — pull latest dotfiles, run install, and reload the shell.
+# One command to keep everything in sync after changes on another machine.
+# Usage: dotup
+dotup() {
+  local d="$HOME/Desktop/dotfiles/dotfiles"
+  git -C "$d" pull && bash "$d/install.sh" && source ~/.zshrc
+}
+
 # Auto-list after cd — runs `ls` every time you change directory.
 # Uses the ls alias (eza with icons if installed) so the listing
 # is always styled. Defined via add-zsh-hook so it stacks cleanly
@@ -539,6 +551,24 @@ alias grbi='git rebase -i'                              # interactive rebase: gr
 alias gundo='git reset HEAD~1 --mixed'                  # undo last commit, keep changes unstaged
 alias gnuke='git reset --hard && git clean -fd'         # ⚠ discard ALL local changes — irreversible
 alias groot='cd $(git rev-parse --show-toplevel)'       # cd to repo root from anywhere inside it
+alias gcam='git commit -am'                             # stage all tracked changes + commit: gcam "msg"
+
+# gsync — rebase current branch onto origin/main (or another base branch).
+# Fetches first so you're rebasing onto the actual remote state.
+# Usage: gsync           → rebase onto origin/main
+#        gsync develop   → rebase onto origin/develop
+gsync() {
+  local base="${1:-main}"
+  git fetch origin "$base" && git rebase "origin/$base"
+}
+
+# gpr — push current branch and open a GitHub PR in one step.
+# --fill uses the commit log as the PR title + body automatically.
+# Requires gh CLI (brew install gh && gh auth login).
+# Usage: gpr
+gpr() {
+  git push -u origin HEAD && gh pr create --fill
+}
 
 
 # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -1181,6 +1211,36 @@ notify() {
     osascript -e "display notification \"$msg (exit $code)\" with title \"✗ Failed\" sound name \"Basso\""
   fi
 }
+
+# auto-notify — send a macOS notification automatically when any command
+# takes longer than AUTO_NOTIFY_THRESHOLD seconds (default: 15).
+# No manual chaining needed — just run a slow build and walk away.
+# The notification shows the command (truncated to 60 chars), elapsed time,
+# and success/failure with a matching sound.
+# Set AUTO_NOTIFY_THRESHOLD=30 in your shell to raise the bar.
+AUTO_NOTIFY_THRESHOLD=${AUTO_NOTIFY_THRESHOLD:-15}
+_an_start=0
+_an_cmd=""
+
+_an_preexec() {
+  _an_start=$SECONDS
+  _an_cmd="${1:0:60}"      # capture first 60 chars of the command
+}
+add-zsh-hook preexec _an_preexec
+
+_an_precmd() {
+  local code=$?
+  local elapsed=$(( SECONDS - _an_start ))
+  if (( _an_start > 0 && elapsed >= AUTO_NOTIFY_THRESHOLD )); then
+    if [[ $code -eq 0 ]]; then
+      osascript -e "display notification \"Done in ${elapsed}s\" with title \"✓ ${_an_cmd}\" sound name \"Glass\""
+    else
+      osascript -e "display notification \"Failed after ${elapsed}s (exit ${code})\" with title \"✗ ${_an_cmd}\" sound name \"Basso\""
+    fi
+  fi
+  _an_start=0
+}
+add-zsh-hook precmd _an_precmd
 
 # epoch — print the current Unix timestamp.
 # fromepoch — convert a Unix timestamp to a human-readable date.
