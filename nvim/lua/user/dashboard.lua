@@ -5,7 +5,7 @@ local M = {}
 
 -- ── Content ──────────────────────────────────────────────────────────
 -- { "Title" }            → section header
--- { "key", "desc" }      → keymap row
+-- { "key", "desc" }      → keymap row / alias row
 
 local C1 = {
   { "Telescope" },
@@ -26,6 +26,14 @@ local C1 = {
   { "C-q",       "Quickfix list"    },
   { "Esc",       "Close picker"     },
   { "Enter",     "Open result"      },
+  { "Shell Nav" },
+  { "..",        "Up one level"     },
+  { "...",       "Up two levels"    },
+  { "-",         "Previous dir"     },
+  { "up N",      "Go up N levels"   },
+  { "dot",       "cd dotfiles"      },
+  { "mkcd",      "mkdir + cd"       },
+  { "scratch",   "Open scratchpad"  },
 }
 
 local C2 = {
@@ -47,6 +55,14 @@ local C2 = {
   { "SPC w",     "Save file"        },
   { "SPC q",     "Quit"             },
   { "SPC Q",     "Force quit all"   },
+  { "Git aliases" },
+  { "lg",        "lazygit TUI"      },
+  { "gs / gd",   "status / diff"    },
+  { "ga / gaa",  "add / add -A"     },
+  { "gc / gca",  "commit / amend"   },
+  { "gp / gpf",  "push / force"     },
+  { "gco / gcb", "checkout / -b"    },
+  { "gundo",     "undo last commit" },
 }
 
 local C3 = {
@@ -68,6 +84,14 @@ local C3 = {
   { "SPC lt",    "Workspace trouble" },
   { "SPC ts",    "Symbols picker"   },
   { "SPC td",    "Diagnostics pick" },
+  { "Vim" },
+  { ".",         "Repeat action"    },
+  { "q<r> / @<r>","Record / play"   },
+  { "@@",        "Replay macro"     },
+  { "ci / ca",   "Change in/around" },
+  { "di / da",   "Delete in/around" },
+  { "yi / ya",   "Yank in/around"   },
+  { "%",         "Match bracket"    },
 }
 
 local C4 = {
@@ -88,6 +112,15 @@ local C4 = {
   { "zz / zt",   "Centre / top"     },
   { "J",         "Join lines"       },
   { "C-a / C-x", "Increment / decr" },
+  { "Docker" },
+  { "dps / dpsa","ps / ps -a"       },
+  { "dex",       "exec -it"         },
+  { "dlog",      "logs -f"          },
+  { "dsh / dbash","sh / bash shell" },
+  { "dcu / dcd", "up / down"        },
+  { "dcud",      "up -d detached"   },
+  { "dstop",     "stop all running" },
+  { "dclean",    "prune imgs+ctrs"  },
 }
 
 local C5 = {
@@ -108,6 +141,15 @@ local C5 = {
   { "Enter",     "Confirm item"     },
   { "Tab/S-Tab", "Jump snippet"     },
   { "C-e",       "Dismiss menu"     },
+  { "kubectl" },
+  { "k / kgp",   "kubectl / pods"   },
+  { "kgpa",      "pods all ns"      },
+  { "kgs / kgn", "services / nodes" },
+  { "kgd / kgda","deployments"      },
+  { "kgcm",      "get configmaps"   },
+  { "kgsec",     "get secrets"      },
+  { "kd / kdp",  "describe / pod"   },
+  { "ports",     "TCP listen ports" },
 }
 
 local C6 = {
@@ -120,7 +162,6 @@ local C6 = {
   { "Pfx+,",      "Rename window"    },
   { "Pfx+x/X",    "Kill pane/win"    },
   { "Pfx+r",      "Reload config"    },
-  { "Pfx+I",      "Install plugins"  },
   { "Pfx+Ctrl+s", "Save session"     },
   { "Pfx+Ctrl+r", "Restore session"  },
   { "Pfx+Enter",  "Enter copy mode"  },
@@ -129,6 +170,15 @@ local C6 = {
   { "Splits" },
   { "C-Up/Dn",    "Resize height"    },
   { "C-Lt/Rt",    "Resize width"     },
+  { "Shell" },
+  { "ts",         "New tmux session" },
+  { "tls",        "List sessions"    },
+  { "tq / tkill", "Detach / kill"    },
+  { "vf",         "nvim fuzzy find"  },
+  { "rgf",        "rg fuzzy find"    },
+  { "serve",      "HTTP server :8000" },
+  { "myip",       "Public IP"        },
+  { "weather",    "wttr.in forecast" },
 }
 
 -- ── Logo ─────────────────────────────────────────────────────────────
