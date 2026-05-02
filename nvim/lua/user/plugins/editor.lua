@@ -325,6 +325,7 @@ return {
         -- Register keymap groups
         -- So which-key shows group names not just keys
         require("which-key").add({
+          { "<leader>u",  desc = "Undo tree" },
           { "<leader>e",  desc = "File browser (telescope)" },
           { "<leader>n",  desc = "Toggle file tree" },
           { "<leader>w",  desc = "Save" },
@@ -379,6 +380,18 @@ return {
         -- Vertical diff split — current file vs HEAD
         map("n", "<leader>gd", ":Gvdiffsplit<CR>",   opts)
       end,
+    },
+
+    -- ── Undotree ──────────────────────────────────────────
+    -- Visual undo history — see every branch of your edit history as a tree
+    -- Combines with undofile=true (options.lua) for persistent history across sessions
+    -- <leader>u to toggle the panel
+    {
+      "mbbill/undotree",
+      cmd  = "UndotreeToggle",
+      keys = {
+        { "<leader>u", "<cmd>UndotreeToggle<CR>", desc = "Undo tree" },
+      },
     },
 
     -- ── Illuminate ────────────────────────────────────────

@@ -37,6 +37,7 @@ local options = {
     pumblend       = 10,        -- slight transparency on popup menu
     winblend       = 0,         -- transparency for floating windows
     conceallevel   = 0,         -- show `` in markdown files (don't hide)
+    colorcolumn    = "120",     -- subtle vertical guide at col 120
     wrap           = false,     -- don't wrap long lines
                                 -- horizontal scroll instead
     scrolloff      = 8,         -- keep 8 lines above/below cursor always

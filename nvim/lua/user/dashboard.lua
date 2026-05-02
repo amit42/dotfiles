@@ -350,6 +350,26 @@ function M.open()
     buffer   = buf,
     callback = render,
   })
+
+  -- Restore window options when leaving the dashboard.
+  -- vim.wo sets window-local opts; without this they persist to the next buffer
+  -- opened in the same window, hiding line numbers everywhere.
+  local win = vim.api.nvim_get_current_win()
+  vim.api.nvim_create_autocmd("BufHidden", {
+    buffer = buf,
+    once   = true,
+    callback = function()
+      vim.schedule(function()
+        if vim.api.nvim_win_is_valid(win) then
+          vim.wo[win].number         = true
+          vim.wo[win].relativenumber = true
+          vim.wo[win].signcolumn     = "yes"
+          vim.wo[win].foldcolumn     = "0"
+          vim.wo[win].cursorline     = true
+        end
+      end)
+    end,
+  })
 end
 
 return M
