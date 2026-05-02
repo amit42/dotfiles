@@ -90,10 +90,17 @@ local DIV_B = #DIV  -- 5
 -- ── Colours (catppuccin-mocha) ────────────────────────────────────────
 
 local function setup_hl()
-  vim.api.nvim_set_hl(0, "DashTitle",   { fg = "#cba6f7" })               -- mauve
-  vim.api.nvim_set_hl(0, "DashSection", { fg = "#cba6f7", bold = true })  -- mauve bold
-  vim.api.nvim_set_hl(0, "DashKey",     { fg = "#fab387" })               -- peach
-  vim.api.nvim_set_hl(0, "DashColDiv",  { fg = "#45475a" })               -- surface1
+  vim.api.nvim_set_hl(0, "DashTitle",   { fg = "#cba6f7" })
+  vim.api.nvim_set_hl(0, "DashSection", { fg = "#cba6f7", bold = true })
+  vim.api.nvim_set_hl(0, "DashKey",     { fg = "#fab387" })
+  vim.api.nvim_set_hl(0, "DashColDiv",  { fg = "#45475a" })
+  -- Logo gradient: · n v i m · — blue → sapphire → sky → mauve → pink → rosewater
+  vim.api.nvim_set_hl(0, "DashGrad1",   { fg = "#89b4fa" })  -- blue      ·
+  vim.api.nvim_set_hl(0, "DashGrad2",   { fg = "#74c7ec" })  -- sapphire  n
+  vim.api.nvim_set_hl(0, "DashGrad3",   { fg = "#89dceb" })  -- sky       v
+  vim.api.nvim_set_hl(0, "DashGrad4",   { fg = "#cba6f7" })  -- mauve     i
+  vim.api.nvim_set_hl(0, "DashGrad5",   { fg = "#f5c2e7" })  -- pink      m
+  vim.api.nvim_set_hl(0, "DashGrad6",   { fg = "#f5e0dc" })  -- rosewater ·
 end
 
 -- ── Helpers ──────────────────────────────────────────────────────────
@@ -150,7 +157,13 @@ function M.build()
   for _, line in ipairs(LOGO) do
     local logo_lnum = lnum
     emit(indent .. string.rep(" ", logo_pad) .. line)
-    hl("DashTitle", logo_lnum, bi + logo_pad, bi + logo_pad + #line)
+    local o = bi + logo_pad
+    hl("DashGrad1", logo_lnum, o + 0,  o + 2)
+    hl("DashGrad2", logo_lnum, o + 4,  o + 5)
+    hl("DashGrad3", logo_lnum, o + 6,  o + 7)
+    hl("DashGrad4", logo_lnum, o + 8,  o + 9)
+    hl("DashGrad5", logo_lnum, o + 10, o + 11)
+    hl("DashGrad6", logo_lnum, o + 13, o + 15)
   end
 
   emit("")  -- gap between logo and grid
