@@ -8,3 +8,7 @@
 # e.g. Alt+h/l for window switching, Alt-based nvim mappings.
 # Right Option keeps default macOS behaviour (special characters).
 macos-option-as-alt = left
+
+# Window padding for breathing room
+window-padding-x = 12
+window-padding-y = 8
