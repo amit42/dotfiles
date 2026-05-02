@@ -8,3 +8,6 @@
 # e.g. Alt+h/l for window switching, Alt-based nvim mappings.
 # Right Option keeps default macOS behaviour (special characters).
 macos-option-as-alt = left
+
+# Font size — increase for large/4K monitors. Default is 12.
+font-size = 14

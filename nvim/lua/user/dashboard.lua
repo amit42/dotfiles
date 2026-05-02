@@ -19,9 +19,13 @@ local C1 = {
   { "SPC tm",    "Marks"            },
   { "SPC tc",    "Git commits"      },
   { "SPC tp",    "Projects"         },
+  { "SPC th",    "Help tags"        },
+  { "SPC tk",    "Keymaps"          },
   { "Inside" },
   { "C-j / C-k", "Move selection"   },
-  { "C-q",       "Send to quickfix" },
+  { "C-q",       "Quickfix list"    },
+  { "Esc",       "Close picker"     },
+  { "Enter",     "Open result"      },
 }
 
 local C2 = {
@@ -39,6 +43,10 @@ local C2 = {
   { "]] / [[",   "Next/prev ref"    },
   { "C-h/j/k/l", "Split nav"        },
   { "n / N",     "Search centred"   },
+  { "General" },
+  { "SPC w",     "Save file"        },
+  { "SPC q",     "Quit"             },
+  { "SPC Q",     "Force quit all"   },
 }
 
 local C3 = {
@@ -54,8 +62,12 @@ local C3 = {
   { "SPC lf",    "Format buffer"    },
   { "SPC ls",    "Signature help"   },
   { "SPC li",    "LSP info"         },
-  { "SPC lj/lk", "Next/prev diag"   },
-  { "SPC lq/lt", "Buf/ws trouble"   },
+  { "SPC lj",    "Next diagnostic"  },
+  { "SPC lk",    "Prev diagnostic"  },
+  { "SPC lq",    "Buffer trouble"   },
+  { "SPC lt",    "Workspace trouble" },
+  { "SPC ts",    "Symbols picker"   },
+  { "SPC td",    "Diagnostics pick" },
 }
 
 local C4 = {
@@ -64,23 +76,26 @@ local C4 = {
   { "SPC S",     "Restore session"  },
   { "SPC m",     "Mason"            },
   { "SPC l",     "Lazy plugins"     },
-  { "SPC tk",    "Keymaps"          },
-  { "SPC th",    "Help tags"        },
-  { "SPC ts",    "Symbols"          },
-  { "SPC td",    "Diagnostics"      },
+  { "C-\\",      "Terminal toggle"  },
+  { "Esc",       "Clear highlights" },
   { "Edit" },
   { "gcc / gc",  "Comment ln / sel" },
   { "A-j / A-k", "Move line"        },
   { "jk",        "Exit insert"      },
   { "Alt+e",     "Fast wrap"        },
+  { "< / >",     "Indent / dedent"  },
+  { "p (visual)", "Paste no-clobber" },
+  { "zz / zt",   "Centre / top"     },
+  { "J",         "Join lines"       },
+  { "C-a / C-x", "Increment / decr" },
 }
 
 local C5 = {
   { "Text Objects" },
   { "af / if",   "Func outer/inner" },
-  { "ac / ic",   "Class outer/inner"},
+  { "ac / ic",   "Class outer/inner" },
   { "aa / ia",   "Arg outer/inner"  },
-  { "ab / ib",   "Block outer/inner"},
+  { "ab / ib",   "Block outer/inner" },
   { "]f / [f",   "Next/prev func"   },
   { "]F / [F",   "Func end fwd/bk"  },
   { "]c / [c",   "Next/prev class"  },
@@ -90,6 +105,9 @@ local C5 = {
   { "C-j / C-k", "Next/prev item"   },
   { "C-Space",   "Trigger"          },
   { "C-b / C-f", "Scroll docs"      },
+  { "Enter",     "Confirm item"     },
+  { "Tab/S-Tab", "Jump snippet"     },
+  { "C-e",       "Dismiss menu"     },
 }
 
 local C6 = {
@@ -101,9 +119,13 @@ local C6 = {
   { "Pfx+c",      "New window"       },
   { "Pfx+,",      "Rename window"    },
   { "Pfx+x/X",    "Kill pane/win"    },
-  { "Pfx+Enter",  "Copy mode"        },
+  { "Pfx+r",      "Reload config"    },
+  { "Pfx+I",      "Install plugins"  },
   { "Pfx+Ctrl+s", "Save session"     },
   { "Pfx+Ctrl+r", "Restore session"  },
+  { "Pfx+Enter",  "Enter copy mode"  },
+  { "v / y",      "Select / copy"    },
+  { "Pfx+p",      "Paste"            },
   { "Splits" },
   { "C-Up/Dn",    "Resize height"    },
   { "C-Lt/Rt",    "Resize width"     },
@@ -117,12 +139,12 @@ local LOGO = {
 
 -- ── Geometry ─────────────────────────────────────────────────────────
 
-local KEY_W   = 10
-local DESC_W  = 17
-local COL_W   = KEY_W + 2 + DESC_W        -- 29 display cells
+local KEY_W   = 12
+local DESC_W  = 18
+local COL_W   = KEY_W + 2 + DESC_W        -- 32 display cells
 local NCOLS   = 6
 local GAP     = 3                          -- display cells between columns
-local BLOCK_W = COL_W * NCOLS + GAP * (NCOLS - 1)  -- 189
+local BLOCK_W = COL_W * NCOLS + GAP * (NCOLS - 1)  -- 207
 
 -- Column separator " │ " — 3 display cells, 5 bytes (│ = U+2502, 3 bytes)
 local DIV   = " \xe2\x94\x82 "
