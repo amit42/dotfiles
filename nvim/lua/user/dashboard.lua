@@ -4,8 +4,8 @@
 local M = {}
 
 -- ── Content ──────────────────────────────────────────────────────────
--- { "Title" }            → section header
--- { "key", "desc" }      → keymap row / alias row
+-- Columns 1-3: pure nvim keymaps
+-- Columns 4-6: pure shell aliases / terminal tools
 
 local C1 = {
   { "Telescope" },
@@ -26,46 +26,9 @@ local C1 = {
   { "C-q",       "Quickfix list"    },
   { "Esc",       "Close picker"     },
   { "Enter",     "Open result"      },
-  { "Shell Nav" },
-  { "..",        "Up one level"     },
-  { "...",       "Up two levels"    },
-  { "-",         "Previous dir"     },
-  { "up N",      "Go up N levels"   },
-  { "dot",       "cd dotfiles"      },
-  { "mkcd",      "mkdir + cd"       },
-  { "scratch",   "Open scratchpad"  },
 }
 
 local C2 = {
-  { "Git" },
-  { "SPC gs",    "Git status"       },
-  { "SPC gd",    "Git diff"         },
-  { "SPC gb",    "Toggle blame"     },
-  { "]h / [h",   "Next/prev hunk"   },
-  { "SPC hs",    "Stage hunk"       },
-  { "SPC hr",    "Reset hunk"       },
-  { "Navigate" },
-  { "S-l / S-h", "Cycle buffers"    },
-  { "SPC x",     "Close buffer"     },
-  { "C-d / C-u", "Scroll centred"   },
-  { "]] / [[",   "Next/prev ref"    },
-  { "C-h/j/k/l", "Split nav"        },
-  { "n / N",     "Search centred"   },
-  { "General" },
-  { "SPC w",     "Save file"        },
-  { "SPC q",     "Quit"             },
-  { "SPC Q",     "Force quit all"   },
-  { "Git aliases" },
-  { "lg",        "lazygit TUI"      },
-  { "gs / gd",   "status / diff"    },
-  { "ga / gaa",  "add / add -A"     },
-  { "gc / gca",  "commit / amend"   },
-  { "gp / gpf",  "push / force"     },
-  { "gco / gcb", "checkout / -b"    },
-  { "gundo",     "undo last commit" },
-}
-
-local C3 = {
   { "LSP" },
   { "gd",        "Go to definition" },
   { "gD",        "Declaration"      },
@@ -76,8 +39,6 @@ local C3 = {
   { "SPC la",    "Code action"      },
   { "SPC lr",    "Rename symbol"    },
   { "SPC lf",    "Format buffer"    },
-  { "SPC ls",    "Signature help"   },
-  { "SPC li",    "LSP info"         },
   { "SPC lj",    "Next diagnostic"  },
   { "SPC lk",    "Prev diagnostic"  },
   { "SPC lq",    "Buffer trouble"   },
@@ -87,60 +48,89 @@ local C3 = {
   { "Vim" },
   { ".",         "Repeat action"    },
   { "q<r> / @<r>","Record / play"   },
-  { "@@",        "Replay macro"     },
   { "ci / ca",   "Change in/around" },
   { "di / da",   "Delete in/around" },
-  { "yi / ya",   "Yank in/around"   },
-  { "%",         "Match bracket"    },
-}
-
-local C4 = {
   { "Tools" },
   { "SPC n",     "File tree"        },
   { "SPC S",     "Restore session"  },
-  { "SPC m",     "Mason"            },
-  { "SPC l",     "Lazy plugins"     },
+  { "SPC m / l", "Mason / Lazy"     },
   { "C-\\",      "Terminal toggle"  },
-  { "Esc",       "Clear highlights" },
+}
+
+local C3 = {
+  { "Navigate" },
+  { "S-l / S-h", "Cycle buffers"    },
+  { "SPC x",     "Close buffer"     },
+  { "C-d / C-u", "Scroll centred"   },
+  { "C-h/j/k/l", "Split nav"        },
+  { "Git" },
+  { "SPC gs",    "Git status"       },
+  { "SPC gd",    "Git diff"         },
+  { "SPC gb",    "Toggle blame"     },
+  { "]h / [h",   "Next/prev hunk"   },
+  { "SPC hs",    "Stage hunk"       },
+  { "SPC hr",    "Reset hunk"       },
   { "Edit" },
   { "gcc / gc",  "Comment ln / sel" },
   { "A-j / A-k", "Move line"        },
   { "jk",        "Exit insert"      },
   { "Alt+e",     "Fast wrap"        },
   { "< / >",     "Indent / dedent"  },
-  { "p (visual)", "Paste no-clobber" },
-  { "zz / zt",   "Centre / top"     },
-  { "J",         "Join lines"       },
-  { "C-a / C-x", "Increment / decr" },
-  { "Docker" },
-  { "dps / dpsa","ps / ps -a"       },
-  { "dex",       "exec -it"         },
-  { "dlog",      "logs -f"          },
-  { "dsh / dbash","sh / bash shell" },
-  { "dcu / dcd", "up / down"        },
-  { "dcud",      "up -d detached"   },
-  { "dstop",     "stop all running" },
-  { "dclean",    "prune imgs+ctrs"  },
-}
-
-local C5 = {
   { "Text Objects" },
   { "af / if",   "Func outer/inner" },
   { "ac / ic",   "Class outer/inner" },
   { "aa / ia",   "Arg outer/inner"  },
   { "ab / ib",   "Block outer/inner" },
-  { "]f / [f",   "Next/prev func"   },
-  { "]F / [F",   "Func end fwd/bk"  },
-  { "]c / [c",   "Next/prev class"  },
-  { "SPC sa",    "Swap arg next"    },
-  { "SPC sA",    "Swap arg prev"    },
   { "Completion" },
   { "C-j / C-k", "Next/prev item"   },
-  { "C-Space",   "Trigger"          },
-  { "C-b / C-f", "Scroll docs"      },
   { "Enter",     "Confirm item"     },
-  { "Tab/S-Tab", "Jump snippet"     },
-  { "C-e",       "Dismiss menu"     },
+}
+
+local C4 = {
+  { "Git aliases" },
+  { "lg",        "lazygit TUI"      },
+  { "gs / gd",   "status / diff"    },
+  { "ga / gaa",  "add / add -A"     },
+  { "gc / gca",  "commit / amend"   },
+  { "gp / gpf",  "push / force"     },
+  { "gl",        "pull"             },
+  { "gco / gcb", "checkout / -b"    },
+  { "glog",      "branch graph"     },
+  { "gst / gstp","stash / pop"      },
+  { "gundo",     "undo last commit" },
+  { "groot",     "cd repo root"     },
+  { "gnuke",     "! discard all"    },
+  { "Shell Nav" },
+  { "..",        "Up one level"     },
+  { "...",       "Up two levels"    },
+  { "-",         "Previous dir"     },
+  { "up N",      "Go up N levels"   },
+  { "dot",       "cd dotfiles"      },
+  { "mkcd",      "mkdir + cd"       },
+  { "scratch",   "Open scratchpad"  },
+  { "Misc" },
+  { "b64 / b64d","base64 enc / dec" },
+  { "serve",     "HTTP server:8000" },
+  { "json",      "pretty print JSON" },
+  { "extract",   "smart unarchive"  },
+}
+
+local C5 = {
+  { "Docker" },
+  { "dps / dpsa","ps / ps -a"       },
+  { "dex",       "exec -it"         },
+  { "dlog",      "logs -f"          },
+  { "dsh / dbash","sh / bash shell" },
+  { "dip",       "container IP"     },
+  { "dimg",      "list images"      },
+  { "dstop",     "stop all running" },
+  { "dclean",    "prune imgs+ctrs"  },
+  { "Compose" },
+  { "dc",        "docker compose"   },
+  { "dcu / dcd", "up / down"        },
+  { "dcud",      "up -d detached"   },
+  { "dcl",       "logs -f (all)"    },
+  { "dcb",       "build images"     },
   { "kubectl" },
   { "k / kgp",   "kubectl / pods"   },
   { "kgpa",      "pods all ns"      },
@@ -149,6 +139,9 @@ local C5 = {
   { "kgcm",      "get configmaps"   },
   { "kgsec",     "get secrets"      },
   { "kd / kdp",  "describe / pod"   },
+  { "Network" },
+  { "myip",      "Public IP"        },
+  { "localip",   "LAN IP (en0)"     },
   { "ports",     "TCP listen ports" },
 }
 
@@ -158,10 +151,10 @@ local C6 = {
   { "Pfx+|/-",    "Vert/horiz split" },
   { "Pfx+h/j/k/l","Navigate panes"   },
   { "Pfx+H/J/K/L","Resize panes"     },
-  { "Pfx+c",      "New window"       },
-  { "Pfx+,",      "Rename window"    },
+  { "Pfx+c / ,",  "New / rename win" },
   { "Pfx+x/X",    "Kill pane/win"    },
   { "Pfx+r",      "Reload config"    },
+  { "Pfx+I",      "Install plugins"  },
   { "Pfx+Ctrl+s", "Save session"     },
   { "Pfx+Ctrl+r", "Restore session"  },
   { "Pfx+Enter",  "Enter copy mode"  },
@@ -174,11 +167,11 @@ local C6 = {
   { "ts",         "New tmux session" },
   { "tls",        "List sessions"    },
   { "tq / tkill", "Detach / kill"    },
+  { "tn",         "New named session" },
   { "vf",         "nvim fuzzy find"  },
   { "rgf",        "rg fuzzy find"    },
-  { "serve",      "HTTP server :8000" },
-  { "myip",       "Public IP"        },
   { "weather",    "wttr.in forecast" },
+  { "fkill",      "fuzzy kill proc"  },
 }
 
 -- ── Logo ─────────────────────────────────────────────────────────────
@@ -208,12 +201,12 @@ local function setup_hl()
   vim.api.nvim_set_hl(0, "DashKey",     { fg = "#fab387" })
   vim.api.nvim_set_hl(0, "DashColDiv",  { fg = "#45475a" })
   -- Logo gradient: blue → sapphire → sky → mauve → pink → rosewater
-  vim.api.nvim_set_hl(0, "DashGrad1",   { fg = "#89b4fa" })  -- blue      ·
-  vim.api.nvim_set_hl(0, "DashGrad2",   { fg = "#74c7ec" })  -- sapphire  n
-  vim.api.nvim_set_hl(0, "DashGrad3",   { fg = "#89dceb" })  -- sky       v
-  vim.api.nvim_set_hl(0, "DashGrad4",   { fg = "#cba6f7" })  -- mauve     i
-  vim.api.nvim_set_hl(0, "DashGrad5",   { fg = "#f5c2e7" })  -- pink      m
-  vim.api.nvim_set_hl(0, "DashGrad6",   { fg = "#f5e0dc" })  -- rosewater ·
+  vim.api.nvim_set_hl(0, "DashGrad1",   { fg = "#89b4fa" })
+  vim.api.nvim_set_hl(0, "DashGrad2",   { fg = "#74c7ec" })
+  vim.api.nvim_set_hl(0, "DashGrad3",   { fg = "#89dceb" })
+  vim.api.nvim_set_hl(0, "DashGrad4",   { fg = "#cba6f7" })
+  vim.api.nvim_set_hl(0, "DashGrad5",   { fg = "#f5c2e7" })
+  vim.api.nvim_set_hl(0, "DashGrad6",   { fg = "#f5e0dc" })
 end
 
 -- ── Helpers ──────────────────────────────────────────────────────────
@@ -246,24 +239,19 @@ function M.build()
   local tw = vim.o.columns
   local th = vim.o.lines - vim.o.cmdheight - 1
 
-  -- Block indent (centres the grid)
   local bi     = math.max(0, math.floor((tw - BLOCK_W) / 2))
   local indent = string.rep(" ", bi)
 
-  -- Logo centering: centre within the same block
   local logo_dw  = vim.fn.strdisplaywidth(LOGO[1])
   local logo_pad = math.max(0, math.floor((BLOCK_W - logo_dw) / 2))
 
-  -- Grid row count
   local cols = { C1, C2, C3, C4, C5, C6 }
   local n    = 0
   for _, c in ipairs(cols) do n = math.max(n, #c) end
 
-  -- Vertical placement: upper third
   local inner_h = #LOGO + 2 + n
   local vpad    = math.max(1, math.floor((th - inner_h) / 3))
 
-  -- ── top padding ──────────────────────────────────────────────────
   for _ = 1, vpad do emit("") end
 
   -- ── logo ─────────────────────────────────────────────────────────
@@ -281,7 +269,7 @@ function M.build()
     hl("DashGrad6", logo_lnum, o + 13, o + 15)
   end
 
-  emit("")  -- gap between logo and grid
+  emit("")
   emit("")
 
   -- ── content grid ─────────────────────────────────────────────────
@@ -308,7 +296,6 @@ function M.build()
 
       if ci < NCOLS then
         table.insert(parts, DIV)
-        -- │ is at byte offset 1 inside " │ "
         row_hls[#row_hls+1] = { "DashColDiv", cur + 1, cur + 4 }
         cur = cur + DIV_B
       end
