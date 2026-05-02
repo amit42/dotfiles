@@ -196,6 +196,21 @@ local function augroup(name)
     end,
   })
 
+  -- ── Restore Line Numbers After Dashboard ─────────────────
+  -- Backstop: if any code path leaves number=false on a normal edit window,
+  -- BufWinEnter resets it. buftype=="" means a real file, not a plugin panel.
+  vim.api.nvim_create_autocmd("BufWinEnter", {
+    group = augroup("restore_number_after_dashboard"),
+    callback = function()
+      if vim.bo.buftype == "" and vim.bo.filetype ~= "dashboard" then
+        vim.wo.number         = true
+        vim.wo.relativenumber = true
+        vim.wo.signcolumn     = "yes"
+        vim.wo.cursorline     = true
+      end
+    end,
+  })
+
   -- ── Auto Create Dir on Save ───────────────────────────────
   -- If you save a file in a folder that doesn't exist
   -- automatically create the folder

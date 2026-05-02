@@ -351,11 +351,10 @@ function M.open()
     callback = render,
   })
 
-  -- Restore window options when leaving the dashboard.
-  -- vim.wo sets window-local opts; without this they persist to the next buffer
-  -- opened in the same window, hiding line numbers everywhere.
+  -- Restore window options after the dashboard buffer is wiped.
+  -- BufHidden never fires when bufhidden=wipe; BufWipeout is the correct event.
   local win = vim.api.nvim_get_current_win()
-  vim.api.nvim_create_autocmd("BufHidden", {
+  vim.api.nvim_create_autocmd("BufWipeout", {
     buffer = buf,
     once   = true,
     callback = function()
