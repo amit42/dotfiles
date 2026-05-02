@@ -39,6 +39,7 @@ return {
             bufferline = true,
             which_key  = true,
             mason      = true,
+            noice      = true,
             native_lsp = {
               enabled = true,
             },
@@ -114,17 +115,13 @@ return {
     },
 
     -- ── Dashboard ───────────────────────────────────────────
-    -- Start screen shown when nvim opens with no file arguments
-    -- dashboard.nvim: actively maintained, cleaner API than alpha.nvim
-    -- Uses the "doom" theme: centered layout with header / shortcuts / footer
+    -- Start screen shown on startup and when the last buffer is closed.
+    -- Loaded on demand via :Dashboard — the VimEnter autocmd (autocommands.lua)
+    -- decides when to open it, handling: nvim, nvim ., nvim-tree restore.
     {
       "nvimdev/dashboard-nvim",
-      event = "VimEnter",
-      -- Only show when nvim is opened bare (no file args, not a git commit)
-      -- Prevents the dashboard appearing during `git commit` or `nvim file.go`
-      cond = function()
-        return vim.fn.argc() == 0 and vim.o.filetype ~= "gitcommit"
-      end,
+      cmd          = "Dashboard",   -- lazy-load; opened by autocommands.lua
+      dependencies = { "nvim-tree/nvim-web-devicons" },
       dependencies = { "nvim-tree/nvim-web-devicons" },
       config = function()
         -- lazy.stats() is accurate by VimEnter — all plugins have been registered
@@ -243,6 +240,47 @@ return {
             footer = {
               "",
               string.format("󱐌  %d plugins · ⚡ %dms startup", stats.count, ms),
+            },
+          },
+        })
+      end,
+    },
+
+    -- ── Floating Command Line ───────────────────────────────
+    -- noice.nvim — replaces the bottom cmdline with a centered float.
+    -- Only cmdline is floated; messages, notifications, and LSP hover stay native
+    -- to avoid conflicts with other plugins.
+    {
+      "folke/noice.nvim",
+      event        = "VeryLazy",
+      dependencies = { "MunifTanjim/nui.nvim" },
+      config = function()
+        require("noice").setup({
+          cmdline = {
+            enabled = true,
+            view    = "cmdline_popup",
+          },
+          messages = { enabled = false },
+          notify   = { enabled = false },
+          lsp = {
+            progress  = { enabled = false },
+            hover     = { enabled = false },
+            signature = { enabled = false },
+            message   = { enabled = false },
+          },
+          views = {
+            cmdline_popup = {
+              position    = { row = "45%", col = "50%" },
+              size        = { width = 64, height = "auto" },
+              border      = { style = "rounded" },
+              win_options = { winblend = 15 },
+            },
+            popupmenu = {
+              relative    = "editor",
+              position    = { row = "55%", col = "50%" },
+              size        = { width = 64, height = 10 },
+              border      = { style = "rounded" },
+              win_options = { winblend = 15 },
             },
           },
         })

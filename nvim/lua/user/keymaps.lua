@@ -131,3 +131,10 @@ keymap("t", "<C-l>", "<C-\\><C-N><C-w>l", term_opts)
 
 -- Lazy lua
 keymap("n", "<leader>l", ":Lazy<CR>", opts)
+
+-- WSL: gx opens URLs via Windows cmd.exe instead of xdg-open (which times out in WSL)
+if vim.fn.has("wsl") == 1 then
+  vim.ui.open = function(path)
+    vim.fn.jobstart({ "cmd.exe", "/c", "start", "", path }, { detach = true })
+  end
+end

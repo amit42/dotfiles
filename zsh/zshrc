@@ -1693,10 +1693,12 @@ alias tkill='tmux kill-session'
 alias tkillall='tmux kill-server'
 
 # ts — attach to a session named after the current directory, or create
-# a new one with 3 pre-configured windows:
-#   1. editor  — opens nvim in project root
+# a new one with pre-configured windows:
+#   1. editor  — opens nvim (dashboard handles startup)
 #   2. terminal — plain shell for running commands
 #   3. logs    — dedicated pane for tailing logs / lnav
+#   4. cmd     — cmd.exe (WSL only)
+#   5. agent   — claude Code session named after the project
 # If the session already exists, just attach (windows are left as-is).
 # Usage: ts    — from ~/dev/myproject creates/attaches session "myproject"
 ts() {
@@ -1705,18 +1707,17 @@ ts() {
   if tmux has-session -t "$name" 2>/dev/null; then
     tmux attach-session -t "$name"
   else
-    # Build the session with core windows first
-    tmux new-session  -d -s "$name" -c "$PWD" -n "editor" "zsh -ic 'nvim .; exec zsh'" \; \
-      new-window      -n "terminal" -c "$PWD"                \; \
-      new-window      -n "logs"     -c "$PWD"
+    local is_wsl=false
+    grep -qi microsoft /proc/version 2>/dev/null && is_wsl=true
 
-    # WSL only: add a cmd.exe window for Windows interop
-    if grep -qi microsoft /proc/version 2>/dev/null; then
-      tmux new-window -t "$name" -n "cmd" -c "$PWD" "cmd.exe"
-    fi
-
-    tmux select-window   -t "$name:1" \; \
-         attach-session  -t "$name"
+    local cmd="tmux new-session -d -s '$name' -c '$PWD' -n 'editor' \"zsh -ic 'nvim; exec zsh'\""
+    cmd+=" \; new-window -n 'terminal' -c '$PWD'"
+    cmd+=" \; new-window -n 'logs' -c '$PWD'"
+    [[ "$is_wsl" == true ]] && cmd+=" \; new-window -n 'cmd' -c '$PWD' 'cmd.exe'"
+    cmd+=" \; new-window -n 'agent' -c '$PWD' \"zsh -ic 'claude --name $name; exec zsh'\""
+    cmd+=" \; select-window -t '$name:1'"
+    cmd+=" \; attach-session -t '$name'"
+    eval "$cmd"
   fi
 }
 
@@ -1833,6 +1834,14 @@ if grep -qi microsoft /proc/version 2>/dev/null; then
   #        wpath ~/projects  → C:\Users\amit97.kumar\projects
   wpath() {
     wslpath -w "${1:-$PWD}"
+  }
+
+  # claude — Claude Code is installed on Windows; call it via cmd.exe.
+  # Passes all arguments through so `claude -p "question"` etc. still work.
+  # Usage: claude            → interactive session
+  #        claude -p "q"     → one-shot answer
+  claude() {
+    cmd.exe /c "claude $*"
   }
 
 fi

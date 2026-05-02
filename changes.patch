@@ -1,0 +1,955 @@
+diff --git a/nvim/KEYMAPS.md b/nvim/KEYMAPS.md
+index a51ae24..b8fd6ff 100644
+--- a/nvim/KEYMAPS.md
++++ b/nvim/KEYMAPS.md
+@@ -8,18 +8,22 @@ Leader key: `Space`
+ 
+ | Key | Action |
+ |-----|--------|
+-| `<leader>w` | Save file |
+-| `<leader>q` | Quit |
+-| `<leader>Q` | Force quit all |
+-| `<leader>l` | Open Lazy plugin manager |
+-| `<Esc>` | Clear search highlights |
++| `SPC w` | Save file |
++| `SPC q` | Quit |
++| `SPC Q` | Force quit all |
++| `SPC l` | Open Lazy plugin manager |
++| `SPC m` | Open Mason (LSP server manager) |
++| `SPC n` | Toggle file tree (nvim-tree) |
++| `SPC e` | File browser (Telescope) |
++| `SPC S` | Restore session for current directory |
++| `Esc` | Clear search highlights |
+ | `jk` | Exit insert mode |
+ 
+ ---
+ 
+ ## Navigation
+ 
+-### Windows / Splits
++### Splits
+ | Key | Action |
+ |-----|--------|
+ | `Ctrl+h/j/k/l` | Move between splits |
+@@ -31,44 +35,60 @@ Leader key: `Space`
+ |-----|--------|
+ | `Shift+l` | Next buffer |
+ | `Shift+h` | Previous buffer |
+-| `<leader>x` | Close buffer (keeps window layout) |
++| `SPC x` | Close buffer (keeps window layout) |
+ 
+-### Scrolling
++### Scrolling / Search
+ | Key | Action |
+ |-----|--------|
+-| `Ctrl+d` | Scroll down (centered) |
+-| `Ctrl+u` | Scroll up (centered) |
+-| `n / N` | Next/prev search result (centered) |
++| `Ctrl+d` | Scroll down (re-centres cursor) |
++| `Ctrl+u` | Scroll up (re-centres cursor) |
++| `n / N` | Next / prev search match (re-centred) |
++
++### References (vim-illuminate)
++| Key | Action |
++|-----|--------|
++| `]]` | Next occurrence of word under cursor |
++| `[[` | Previous occurrence of word under cursor |
+ 
+ ---
+ 
+-## Telescope (Fuzzy Finder)
++## Telescope
++
++All bindings are under `SPC t`.
+ 
+ | Key | Action |
+ |-----|--------|
+-| `<leader>f` | Find files |
+-| `<leader>g` | Live grep (search text) |
+-| `<leader>b` | Open buffers |
+-| `<leader>h` | Help tags |
+-| `<leader>r` | Recent files |
+-| `<leader>c` | Git commits |
+-| `<leader>p` | Projects |
+-| `<leader>fb` | File browser (current file's directory) |
++| `SPC tf` | Find files |
++| `SPC tr` | Recent files |
++| `SPC tg` | Live grep |
++| `SPC tw` | Grep word under cursor |
++| `SPC te` | File browser |
++| `SPC tb` | Open buffers |
++| `SPC tj` | Jump list |
++| `SPC tm` | Marks |
++| `SPC ts` | Symbols in file (LSP) |
++| `SPC td` | Diagnostics |
++| `SPC tc` | Git commits |
++| `SPC tp` | Projects |
++| `SPC th` | Help tags |
++| `SPC tk` | Keymaps |
+ 
+ ### Inside Telescope
+ | Key | Action |
+ |-----|--------|
+-| `Ctrl+j/k` | Move selection down/up |
++| `Ctrl+j/k` | Move selection down / up |
+ | `Ctrl+q` | Send selection to quickfix list |
+ | `Esc` | Close |
+ 
+ ---
+ 
+-## File Explorer (nvim-tree)
++## File Tree (nvim-tree)
+ 
+ | Key | Action |
+ |-----|--------|
+-| `<leader>e` | Toggle file explorer |
++| `SPC n` | Toggle sidebar |
++| `R` | Refresh tree manually |
++| Standard nvim-tree keys apply inside the tree |
+ 
+ ---
+ 
+@@ -77,21 +97,26 @@ Leader key: `Space`
+ | Key | Action |
+ |-----|--------|
+ | `Ctrl+\` | Toggle floating terminal |
+-| `Ctrl+h/j/k/l` | Move from terminal to split |
++| `Ctrl+h/j/k/l` | Navigate from terminal to split |
+ 
+ ---
+ 
+ ## Git
+ 
++### Fugitive
++| Key | Action |
++|-----|--------|
++| `SPC gs` | Git status (interactive fugitive buffer) |
++| `SPC gd` | Git diff split |
++
++### Gitsigns (hunk operations)
+ | Key | Action |
+ |-----|--------|
+-| `<leader>gs` | Git status (fugitive) |
+-| `<leader>gd` | Git diff split |
+-| `]h` | Next git hunk |
+-| `[h` | Previous git hunk |
+-| `<leader>hs` | Stage hunk |
+-| `<leader>hr` | Reset hunk |
+-| `<leader>tb` | Toggle inline git blame |
++| `]h` | Next hunk |
++| `[h` | Previous hunk |
++| `SPC hs` | Stage hunk |
++| `SPC hr` | Reset hunk |
++| `SPC gb` | Toggle inline git blame |
+ 
+ ---
+ 
+@@ -103,18 +128,19 @@ Leader key: `Space`
+ | `gD` | Go to declaration |
+ | `gi` | Go to implementation |
+ | `gr` | References |
+-| `K` | Hover docs |
+-| `<leader>ls` | Signature help |
++| `K` | Hover documentation |
+ | `gl` | Show diagnostic float |
+-| `<leader>lj` | Next diagnostic |
+-| `<leader>lk` | Previous diagnostic |
+-| `<leader>lq` | Buffer diagnostics (Trouble) |
+-| `<leader>lt` | Workspace diagnostics (Trouble) |
+-| `<leader>la` | Code action |
+-| `<leader>lr` | Rename symbol |
+-| `<leader>lf` | Format file |
+-| `<leader>li` | LSP info |
+-| `<leader>m` | Mason (server manager) |
++| `SPC la` | Code action |
++| `SPC lr` | Rename symbol |
++| `SPC lf` | Format file |
++| `SPC ls` | Signature help |
++| `SPC li` | LSP info |
++| `SPC lj` | Next diagnostic |
++| `SPC lk` | Previous diagnostic |
++| `SPC lq` | Buffer diagnostics (Trouble) |
++| `SPC lt` | Workspace diagnostics (Trouble) |
++| `SPC ts` | Symbols picker (Telescope) |
++| `SPC td` | Diagnostics picker (Telescope) |
+ 
+ ---
+ 
+@@ -122,56 +148,65 @@ Leader key: `Space`
+ 
+ | Key | Action |
+ |-----|--------|
+-| `Ctrl+j/k` | Next/prev item |
++| `Ctrl+j/k` | Next / prev item |
+ | `Ctrl+Space` | Trigger completion |
+-| `Ctrl+b/f` | Scroll docs |
++| `Ctrl+b/f` | Scroll docs up / down |
+ | `Ctrl+e` | Dismiss menu |
+ | `Enter` | Confirm selected item |
+-| `Tab / Shift+Tab` | Next/prev item or jump snippet placeholder |
++| `Tab / Shift+Tab` | Next / prev item or jump snippet placeholder |
+ 
+ ---
+ 
+-## Treesitter Text Objects
++## Editing
+ 
+-### Select
++### Comments (Comment.nvim)
+ | Key | Action |
+ |-----|--------|
+-| `af / if` | Around/inside function |
+-| `ac / ic` | Around/inside class |
+-| `aa / ia` | Around/inside argument |
+-| `ab / ib` | Around/inside block |
++| `gcc` | Toggle line comment |
++| `gc` + motion | Toggle comment over motion |
++| `gc` (visual) | Toggle comment on selection |
+ 
+-### Move
++### Move Lines
+ | Key | Action |
+ |-----|--------|
+-| `]f / [f` | Next/prev function start |
+-| `]F / [F` | Next/prev function end |
+-| `]c / [c` | Next/prev class |
++| `Alt+j` | Move line / selection down |
++| `Alt+k` | Move line / selection up |
+ 
+-### Swap
++### Visual Mode
+ | Key | Action |
+ |-----|--------|
+-| `<leader>sa` | Swap argument with next |
+-| `<leader>sA` | Swap argument with previous |
++| `< / >` | Indent / dedent and stay in visual |
++| `p` | Paste without overwriting register |
++
++### Autopairs
++| Key | Action |
++|-----|--------|
++| `Alt+e` | Fast wrap — wrap next word with pending pair |
+ 
+ ---
+ 
+-## References (vim-illuminate)
++## Treesitter Text Objects
+ 
++### Select
+ | Key | Action |
+ |-----|--------|
+-| `]]` | Next reference of word under cursor |
+-| `[[` | Previous reference of word under cursor |
++| `af / if` | Around / inside function |
++| `ac / ic` | Around / inside class |
++| `aa / ia` | Around / inside argument |
++| `ab / ib` | Around / inside block |
+ 
+----
+-
+-## Movement (Visual Mode)
++### Move
++| Key | Action |
++|-----|--------|
++| `]f / [f` | Next / prev function start |
++| `]F / [F` | Next / prev function end |
++| `]c / [c` | Next / prev class |
+ 
++### Swap
+ | Key | Action |
+ |-----|--------|
+-| `Alt+j/k` | Move selected lines down/up |
+-| `< / >` | Indent/dedent and reselect |
+-| `p` | Paste without overwriting register |
++| `SPC sa` | Swap argument with next |
++| `SPC sA` | Swap argument with previous |
+ 
+ ---
+ 
+@@ -179,4 +214,29 @@ Leader key: `Space`
+ 
+ | Key | Action |
+ |-----|--------|
+-| `<leader>S` | Restore last session for current directory |
++| `SPC S` | Restore last session for current directory |
++
++---
++
++## Tmux (prefix = `Ctrl+Space`)
++
++| Key | Action |
++|-----|--------|
++| `Prefix+\|` | Vertical split |
++| `Prefix+-` | Horizontal split |
++| `Prefix+c` | New window |
++| `Prefix+,` | Rename window |
++| `Prefix+h/j/k/l` | Navigate panes |
++| `Prefix+H/J/K/L` | Resize panes |
++| `Ctrl+h/l` | Previous / next window (with prefix) |
++| `Alt+h/l` | Previous / next window (no prefix needed) |
++| `Prefix+x` | Kill pane |
++| `Prefix+X` | Kill window |
++| `Prefix+r` | Reload tmux config |
++| `Prefix+Enter` | Enter copy mode |
++| `v` | Begin selection (copy mode) |
++| `y` | Copy selection (copy mode) |
++| `Prefix+p` | Paste |
++| `Prefix+Ctrl+s` | Save session (tmux-resurrect) |
++| `Prefix+Ctrl+r` | Restore session (tmux-resurrect) |
++| `Prefix+I` | Install plugins (TPM) |
+diff --git a/nvim/init.lua b/nvim/init.lua
+index cd43654..4f42299 100644
+--- a/nvim/init.lua
++++ b/nvim/init.lua
+@@ -1,3 +1,4 @@
+ require("user.options")
+ require("user.keymaps")
++require("user.autocommands")
+ require("user.lazy")
+diff --git a/nvim/lua/user/autocommands.lua b/nvim/lua/user/autocommands.lua
+index 8b57fc0..e067eba 100644
+--- a/nvim/lua/user/autocommands.lua
++++ b/nvim/lua/user/autocommands.lua
+@@ -142,6 +142,60 @@ local function augroup(name)
+     end,
+   })
+   
++
++
++  -- ── Telescope Window Overrides ───────────────────────────
++  -- sidescrolloff=8 (from options.lua) causes the results window to scroll
++  -- right whenever the cursor lands on any entry (entries are padded to fill
++  -- the window, so the cursor is always near the right edge from Neovim's POV).
++  -- Zero it out only for telescope buffers so all other windows keep their margin.
++  vim.api.nvim_create_autocmd("FileType", {
++    group = augroup("telescope_win_opts"),
++    pattern = { "TelescopeResults", "TelescopePrompt", "TelescopePreview" },
++    callback = function()
++      vim.opt_local.sidescrolloff = 0
++      vim.opt_local.scrolloff     = 0
++    end,
++  })
++
++  -- Hide trailing slash on directory entries in telescope file browser.
++  -- The file browser appends "/" to folder names; the folder icon already
++  -- signals "directory", so the slash is visual noise.  Conceal it without
++  -- touching the entry data (ordinal / path stay intact for navigation).
++  vim.api.nvim_create_autocmd("FileType", {
++    group = augroup("telescope_no_dir_slash"),
++    pattern = "TelescopeResults",
++    callback = function()
++      vim.opt_local.conceallevel  = 2
++      vim.opt_local.concealcursor = "nvc"
++      -- Match the slash that sits at EOL (possibly followed by padding spaces)
++      vim.fn.matchadd("Conceal", "/\\ze\\s*$")
++    end,
++  })
++
++  -- ── Show Dashboard on Startup Instead of Empty/Tree Buffer ──
++  -- Runs after all plugins settle (defer 100ms) so dashboard is loaded.
++  -- Handles: nvim . (dir buffer), tmux-resurrect restoring nvim-tree, plain nvim with no file.
++  vim.api.nvim_create_autocmd("VimEnter", {
++    group = augroup("startup_dashboard"),
++    once  = true,
++    callback = function()
++      vim.defer_fn(function()
++        local ft      = vim.bo.filetype
++        local bufname = vim.api.nvim_buf_get_name(0)
++        local is_empty = bufname == "" and (ft == "" or ft == "dashboard")
++        local is_dir   = vim.fn.isdirectory(bufname) == 1
++        local is_tree  = ft == "NvimTree"
++
++        if is_empty or is_dir or is_tree then
++          if is_dir then vim.cmd("cd " .. vim.fn.fnameescape(bufname)) end
++          pcall(vim.cmd, "NvimTreeClose")
++          require("user.dashboard").open()
++        end
++      end, 100)
++    end,
++  })
++
+   -- ── Auto Create Dir on Save ───────────────────────────────
+   -- If you save a file in a folder that doesn't exist
+   -- automatically create the folder
+@@ -153,4 +207,23 @@ local function augroup(name)
+         or event.match
+       vim.fn.mkdir(vim.fn.fnamemodify(file, ":p:h"), "p")
+     end,
++  })
++
++  -- ── Dashboard on Last Buffer Close ────────────────────────
++  -- When the last real buffer is deleted, show the dashboard
++  -- instead of leaving an empty unnamed buffer.
++  -- Dashboard buffers are not listed so they never trigger this.
++  vim.api.nvim_create_autocmd("BufDelete", {
++    group = augroup("dashboard_on_last_buffer"),
++    callback = function(event)
++      if not vim.bo[event.buf].buflisted then return end
++      vim.schedule(function()
++        local bufs = vim.tbl_filter(function(b)
++          return vim.bo[b].buflisted and vim.api.nvim_buf_is_valid(b)
++        end, vim.api.nvim_list_bufs())
++        if #bufs == 0 then
++          require("user.dashboard").open()
++        end
++      end)
++    end,
+   })
+\ No newline at end of file
+diff --git a/nvim/lua/user/keymaps.lua b/nvim/lua/user/keymaps.lua
+index 69ef561..431a9b5 100644
+--- a/nvim/lua/user/keymaps.lua
++++ b/nvim/lua/user/keymaps.lua
+@@ -131,3 +131,10 @@ keymap("t", "<C-l>", "<C-\\><C-N><C-w>l", term_opts)
+ 
+ -- Lazy lua
+ keymap("n", "<leader>l", ":Lazy<CR>", opts)
++
++-- WSL: gx opens URLs via Windows cmd.exe instead of xdg-open (which times out in WSL)
++if vim.fn.has("wsl") == 1 then
++  vim.ui.open = function(path)
++    vim.fn.jobstart({ "cmd.exe", "/c", "start", "", path }, { detach = true })
++  end
++end
+diff --git a/nvim/lua/user/lsp/mason.lua b/nvim/lua/user/lsp/mason.lua
+index f32c980..947cf5e 100644
+--- a/nvim/lua/user/lsp/mason.lua
++++ b/nvim/lua/user/lsp/mason.lua
+@@ -27,6 +27,10 @@ local servers = {
+ require("mason").setup({
+   ui = {
+     border = "rounded",
++    providers = {
++    "mason.providers.registry-api",
++    "mason.providers.client",
++    },
+     icons  = {
+       package_installed   = "✓",
+       package_pending     = "➜",
+diff --git a/nvim/lua/user/options.lua b/nvim/lua/user/options.lua
+index 4e6a26f..596f893 100644
+--- a/nvim/lua/user/options.lua
++++ b/nvim/lua/user/options.lua
+@@ -91,4 +91,9 @@ local options = {
+   vim.opt.iskeyword:append "-"             -- treat hyphenated-words as one word
+                                            -- for w, b, e motions
+   vim.opt.formatoptions:remove { "c", "r", "o" }  -- don't auto insert comment
+-                                                   -- leader on new lines
+\ No newline at end of file
++                                                   -- leader on new lines
++
++  -- exrc: auto-loads .nvim.lua from the project root when nvim starts there.
++  -- secure: only runs if the file is owned by you — prevents malicious project configs.
++  vim.opt.exrc   = true
++  vim.opt.secure = true
+\ No newline at end of file
+diff --git a/nvim/lua/user/plugins/editor.lua b/nvim/lua/user/plugins/editor.lua
+index 90b9d56..2b23890 100644
+--- a/nvim/lua/user/plugins/editor.lua
++++ b/nvim/lua/user/plugins/editor.lua
+@@ -21,8 +21,75 @@ return {
+       },
+       config = function()
+         local telescope = require("telescope")
+-        local actions = require("telescope.actions")
+-  
++        local actions   = require("telescope.actions")
++
++        -- Custom directory previewer: shows contents with devicons, same look as the
++        -- file browser entry list.  Files fall through to telescope's default previewer.
++        local function make_fb_previewer()
++          local previewers  = require("telescope.previewers")
++          local conf        = require("telescope.config").values
++          local _, devicons = pcall(require, "nvim-web-devicons")
++          local dir_icon    = "\xef\x90\x93 "   -- U+F413 nerd-font folder (same as file browser)
++
++          return previewers.new_buffer_previewer({
++            define_preview = function(self, entry)
++              local bufnr    = self.state.bufnr
++              local filepath = tostring(entry.path or entry.filename or "")
++              if filepath == "" then return end
++
++              local stat = vim.loop.fs_stat(filepath)
++              if not stat then return end
++
++              if stat.type ~= "directory" then
++                conf.buffer_previewer_maker(filepath, bufnr, {
++                  bufname = self.state.bufname,
++                  winid   = self.state.winid,
++                  preview = conf.preview or {},
++                })
++                return
++              end
++
++              local dirs, files = {}, {}
++              local scan = vim.loop.fs_scandir(filepath)
++              if not scan then return end
++              while true do
++                local name, ftype = vim.loop.fs_scandir_next(scan)
++                if not name then break end
++                if ftype == "link" then
++                  local s = vim.loop.fs_stat(filepath .. "/" .. name)
++                  ftype = s and s.type or "file"
++                end
++                if ftype == "directory" then table.insert(dirs, name)
++                else table.insert(files, name) end
++              end
++              table.sort(dirs)
++              table.sort(files)
++
++              local lines, hls = {}, {}
++              for _, name in ipairs(dirs) do
++                table.insert(lines, dir_icon .. name .. "/")
++                table.insert(hls, { "TelescopePreviewDirectory", #lines - 1, 0, -1 })
++              end
++              for _, name in ipairs(files) do
++                local icon, hl_grp = "  ", "Normal"
++                if devicons then
++                  local i, g = devicons.get_icon(name, name:match("%.([^%.]+)$"), { default = true })
++                  if i then icon = i .. " "; hl_grp = g or "Normal" end
++                end
++                table.insert(lines, icon .. name)
++                local ib = #icon
++                table.insert(hls, { hl_grp,   #lines - 1, 0,  ib })
++                table.insert(hls, { "Normal",  #lines - 1, ib, -1 })
++              end
++
++              vim.api.nvim_buf_set_lines(bufnr, 0, -1, false, lines)
++              for _, h in ipairs(hls) do
++                vim.api.nvim_buf_add_highlight(bufnr, 0, h[1], h[2], h[3], h[4])
++              end
++            end,
++          })
++        end
++
+         telescope.setup({
+           extensions = {
+             -- ui-select replaces vim.ui.select globally
+@@ -30,11 +97,18 @@ return {
+             ["ui-select"] = {
+               require("telescope.themes").get_dropdown(),
+             },
++            file_browser = {
++              display_stat = false,
++              git_status   = false,  -- git icons have variable display-cell width; disabling prevents entry shifting
++              grouped      = true,
++              path_display = { "tail" },  -- show only filename, no accumulated path prefix
++            },
+           },
+           defaults = {
+             prompt_prefix = " ",         -- search icon in prompt
+             selection_caret = " ",       -- arrow on selected item
+-            path_display = { "smart" },   -- smart path shortening
++            entry_prefix = " ",          -- must match selection_caret width; mismatch shifts entries on hover
++            path_display = { "truncate" }, -- paths relative to cwd, no ../ artifacts
+             file_ignore_patterns = {      -- never show these in results
+               "node_modules",
+               ".git/",
+@@ -70,24 +144,61 @@ return {
+         telescope.load_extension("ui-select")
+ 
+         -- ── Telescope Keymaps ──────────────────────────────
++        -- All under <leader>t — lowercase only, no capitals
+         local map = vim.keymap.set
+         local opts = { noremap = true, silent = true }
++        local builtin = require("telescope.builtin")
++
++        -- Files
++        map("n", "<leader>tf", builtin.find_files,                    opts)  -- find files
++        map("n", "<leader>tr", builtin.oldfiles,                      opts)  -- recent files
++        map("n", "<leader>te", function()                                        -- file browser
++          require("telescope").extensions.file_browser.file_browser({
++            display_stat  = false,
++            git_status    = false,
++            grouped       = true,
++            path_display  = { "tail" },  -- show only filename, prevents rightward shift when navigating deep
++            previewer     = make_fb_previewer(),
++          })
++        end, opts)
++
++        -- Search
++        map("n", "<leader>tg", builtin.live_grep,                     opts)  -- grep text
++        map("n", "<leader>tw", builtin.grep_string,                   opts)  -- grep word under cursor
++
++        -- Buffers / Navigation
++        map("n", "<leader>tb", builtin.buffers,                       opts)  -- open buffers
++        map("n", "<leader>tj", builtin.jumplist,                      opts)  -- jump history
++        map("n", "<leader>tm", builtin.marks,                         opts)  -- vim marks
+ 
+-        map("n", "<leader>f", ":Telescope find_files<CR>",    opts)  -- find files
+-        map("n", "<leader>g", ":Telescope live_grep<CR>",     opts)  -- search text
+-        map("n", "<leader>b", ":Telescope buffers<CR>",       opts)  -- open buffers
+-        map("n", "<leader>h", ":Telescope help_tags<CR>",     opts)  -- help tags
+-        map("n", "<leader>r", ":Telescope oldfiles<CR>",      opts)  -- recent files
+-        map("n", "<leader>c", ":Telescope git_commits<CR>",   opts)  -- git commits
+-        map("n", "<leader>p", ":Telescope projects<CR>",      opts)  -- projects
+-        -- file browser opens at the directory of the current file
+-        map("n", "<leader>fb", ":Telescope file_browser path=%:p:h select_buffer=true<CR>", opts)
++        -- LSP
++        map("n", "<leader>ts", builtin.lsp_document_symbols,          opts)  -- symbols in file
++        map("n", "<leader>td", builtin.diagnostics,                   opts)  -- all diagnostics
++
++        -- Git
++        map("n", "<leader>tc", builtin.git_commits,                   opts)  -- commits
++
++        -- Meta
++        map("n", "<leader>tp", ":Telescope projects<CR>",             opts)  -- projects
++        map("n", "<leader>th", builtin.help_tags,                     opts)  -- help
++        map("n", "<leader>tk", builtin.keymaps,                       opts)  -- keymaps
++
++        -- Space+e → file browser (replaces nvim-tree)
++        map("n", "<leader>e", function()
++          require("telescope").extensions.file_browser.file_browser({
++            display_stat  = false,
++            git_status    = false,
++            grouped       = true,
++            path_display  = { "tail" },  -- show only filename, prevents rightward shift when navigating deep
++            previewer     = make_fb_previewer(),
++          })
++        end, opts)
+       end,
+     },
+   
+     -- ── File Explorer ──────────────────────────────────────
+     -- nvim-tree — sidebar file browser
+-    -- toggle with Space+e
++    -- Space+n toggles the sidebar, Space+e opens telescope file browser
+     {
+       "nvim-tree/nvim-tree.lua",
+       dependencies = {
+@@ -100,6 +211,7 @@ return {
+         vim.g.loaded_netrwPlugin = 1
+   
+         require("nvim-tree").setup({
++          hijack_directories = { enable = false },  -- let our VimEnter autocmd handle nvim . → dashboard
+           view = {
+             width = 30,                  -- sidebar width
+             side = "left",
+@@ -133,11 +245,9 @@ return {
+               { buffer = bufnr, noremap = true, silent = true, desc = "Refresh tree" })
+           end,
+         })
+-  
+-        -- Toggle file explorer
+-        vim.keymap.set("n", "<leader>e",
+-          ":NvimTreeToggle<CR>",
+-          { noremap = true, silent = true })
++
++        vim.keymap.set("n", "<leader>n", ":NvimTreeToggle<CR>",
++          { noremap = true, silent = true, desc = "Toggle file tree" })
+       end,
+     },
+   
+@@ -194,7 +304,7 @@ return {
+             changedelete = { text = "▎" },
+           },
+           current_line_blame = false,    -- show git blame on current line
+-                                         -- toggle with Space+tb
++                                         -- toggle with Space+gb
+           on_attach = function(bufnr)
+             local map = vim.keymap.set
+             local opts = { buffer = bufnr, noremap = true, silent = true }
+@@ -208,7 +318,7 @@ return {
+             map("n", "<leader>hr", ":Gitsigns reset_hunk<CR>", opts)
+   
+             -- Toggle line blame
+-            map("n", "<leader>tb", ":Gitsigns toggle_current_line_blame<CR>", opts)
++            map("n", "<leader>gb", ":Gitsigns toggle_current_line_blame<CR>", opts)
+           end,
+         })
+       end,
+@@ -232,27 +342,34 @@ return {
+         -- Register keymap groups
+         -- So which-key shows group names not just keys
+         require("which-key").add({
+-          { "<leader>f", desc = "Find files" },
+-          { "<leader>g", desc = "Live grep" },
+-          { "<leader>b", desc = "Buffers" },
+-          { "<leader>e", desc = "Explorer" },
+-          { "<leader>w", desc = "Save" },
+-          { "<leader>q", desc = "Quit" },
+-          { "<leader>l", desc = "Lazy" },
+-          { "<leader>h", desc = "Help" },
+-          { "<leader>r", desc = "Recent files" },
+-          { "<leader>c", desc = "Git commits" },
+-          { "<leader>p",  desc = "Projects" },
+-          { "<leader>S",  desc = "Restore session" },
+-          { "<leader>fb", desc = "File browser" },
+-          { "<leader>g",  group = "Git" },
+-          { "<leader>gs", desc = "Git status (fugitive)" },
+-          { "<leader>gd", desc = "Git diff split" },
++          { "<leader>e",  desc = "File browser (telescope)" },
++          { "<leader>n",  desc = "Toggle file tree" },
++          { "<leader>w",  desc = "Save" },
++          { "<leader>q",  desc = "Quit" },
+           { "<leader>l",  group = "LSP" },
+           { "<leader>lq", desc = "Buffer diagnostics (trouble)" },
+           { "<leader>lt", desc = "Workspace diagnostics (trouble)" },
+-          { "<leader>t",  group = "Toggle" },
+-          { "<leader>tb", desc = "Toggle blame" },
++          { "<leader>g",  group = "Git" },
++          { "<leader>gs", desc = "Git status (fugitive)" },
++          { "<leader>gd", desc = "Git diff split" },
++          { "<leader>t",  group = "Telescope / Toggle" },
++          { "<leader>gb", desc = "Toggle blame" },
++          { "<leader>tb", desc = "Open buffers" },
++          { "<leader>tf", desc = "Find files" },
++          { "<leader>tg", desc = "Live grep" },
++          { "<leader>tw", desc = "Grep word under cursor" },
++          { "<leader>tr", desc = "Recent files" },
++          { "<leader>te", desc = "File browser" },
++          { "<leader>to", desc = "Open buffers" },
++          { "<leader>tj", desc = "Jump list" },
++          { "<leader>tm", desc = "Marks" },
++          { "<leader>ts", desc = "Symbols in file" },
++          { "<leader>td", desc = "Diagnostics" },
++          { "<leader>tc", desc = "Git commits" },
++          { "<leader>tp", desc = "Projects" },
++          { "<leader>th", desc = "Help tags" },
++          { "<leader>tk", desc = "Keymaps" },
++          { "<leader>S",  desc = "Restore session" },
+         })
+       end,
+     },
+diff --git a/nvim/lua/user/plugins/ui.lua b/nvim/lua/user/plugins/ui.lua
+index 7e82c37..4168bd4 100644
+--- a/nvim/lua/user/plugins/ui.lua
++++ b/nvim/lua/user/plugins/ui.lua
+@@ -39,6 +39,7 @@ return {
+             bufferline = true,
+             which_key  = true,
+             mason      = true,
++            noice      = true,
+             native_lsp = {
+               enabled = true,
+             },
+@@ -113,136 +114,40 @@ return {
+       end,
+     },
+ 
+-    -- ── Dashboard ───────────────────────────────────────────
+-    -- Start screen shown when nvim opens with no file arguments
+-    -- dashboard.nvim: actively maintained, cleaner API than alpha.nvim
+-    -- Uses the "doom" theme: centered layout with header / shortcuts / footer
++    -- ── Floating Command Line ───────────────────────────────
++    -- noice.nvim — replaces the bottom cmdline with a centered float
++    -- Only cmdline is floated; messages and notifications stay native
+     {
+-      "nvimdev/dashboard-nvim",
+-      event = "VimEnter",
+-      -- Only show when nvim is opened bare (no file args, not a git commit)
+-      -- Prevents the dashboard appearing during `git commit` or `nvim file.go`
+-      cond = function()
+-        return vim.fn.argc() == 0 and vim.o.filetype ~= "gitcommit"
+-      end,
+-      dependencies = { "nvim-tree/nvim-web-devicons" },
++      "folke/noice.nvim",
++      event        = "VeryLazy",
++      dependencies = { "MunifTanjim/nui.nvim" },
+       config = function()
+-        -- lazy.stats() is accurate by VimEnter — all plugins have been registered
+-        local stats = require("lazy").stats()
+-        local ms    = math.floor(stats.startuptime * 100 + 0.5) / 100
+-
+-        require("dashboard").setup({
+-          theme = "doom",   -- centered layout; "hyper" adds a sidebar instead
+-
+-          -- Hide chrome so the dashboard has the full screen to itself
+-          -- They restore automatically when you open a real buffer
+-          hide = {
+-            statusline = true,
+-            tabline    = true,
+-            winbar     = true,
++        require("noice").setup({
++          cmdline = {
++            enabled = true,
++            view    = "cmdline_popup",
+           },
+-
+-          config = {
+-
+-            -- ── Header ──────────────────────────────────────
+-            -- "NVIM" in ANSI Shadow — shorter than NEOVIM, fits any terminal width
+-            -- Empty strings add vertical padding around the logo
+-            header = {
+-              "",
+-              "",
+-              "  ███╗   ██╗██╗   ██╗██╗███╗   ███╗  ",
+-              "  ████╗  ██║██║   ██║██║████╗ ████║  ",
+-              "  ██╔██╗ ██║██║   ██║██║██╔████╔██║  ",
+-              "  ██║╚██╗██║╚██╗ ██╔╝██║██║╚██╔╝██║  ",
+-              "  ██║ ╚████║ ╚████╔╝ ██║██║ ╚═╝ ██║  ",
+-              "  ╚═╝  ╚═══╝  ╚═══╝  ╚═╝╚═╝     ╚═╝  ",
+-              "",
+-            },
+-
+-            -- ── Shortcuts ───────────────────────────────────
+-            -- Keys mirror leader mappings in keymaps.lua so muscle memory transfers
+-            center = {
+-              {
+-                icon    = "󰱽  ",
+-                desc    = "Find File",
+-                key     = "f",
+-                action  = "Telescope find_files",
+-                key_hl  = "Number",
+-                icon_hl = "Title",
+-              },
+-              {
+-                icon    = "  ",
+-                desc    = "Recent Files",
+-                key     = "r",
+-                action  = "Telescope oldfiles",
+-                key_hl  = "Number",
+-                icon_hl = "Title",
+-              },
+-              {
+-                icon    = "󰍉  ",
+-                desc    = "Live Grep",
+-                key     = "g",
+-                action  = "Telescope live_grep",
+-                key_hl  = "Number",
+-                icon_hl = "Title",
+-              },
+-              {
+-                icon    = "  ",
+-                desc    = "Projects",
+-                key     = "p",
+-                action  = "Telescope projects",
+-                key_hl  = "Number",
+-                icon_hl = "Title",
+-              },
+-              {
+-                icon    = "  ",
+-                desc    = "Restore Session",
+-                key     = "s",
+-                -- load() restores the session for the current working directory
+-                action  = "lua require('persistence').load()",
+-                key_hl  = "Number",
+-                icon_hl = "Title",
+-              },
+-              {
+-                icon    = "  ",
+-                desc    = "New File",
+-                key     = "n",
+-                action  = "ene | startinsert",
+-                key_hl  = "Number",
+-                icon_hl = "Title",
+-              },
+-              {
+-                icon    = "  ",
+-                desc    = "Config",
+-                key     = "c",
+-                action  = "edit $MYVIMRC",
+-                key_hl  = "Number",
+-                icon_hl = "Title",
+-              },
+-              {
+-                icon    = "󰚰  ",
+-                desc    = "Update Plugins",
+-                key     = "u",
+-                action  = "Lazy sync",
+-                key_hl  = "Number",
+-                icon_hl = "Title",
+-              },
+-              {
+-                icon    = "  ",
+-                desc    = "Quit",
+-                key     = "q",
+-                action  = "qa",
+-                key_hl  = "Number",
+-                icon_hl = "Title",
+-              },
++          messages = { enabled = false },
++          notify   = { enabled = false },
++          lsp = {
++            progress  = { enabled = false },
++            hover     = { enabled = false },
++            signature = { enabled = false },
++            message   = { enabled = false },
++          },
++          views = {
++            cmdline_popup = {
++              position    = { row = "45%", col = "50%" },
++              size        = { width = 64, height = "auto" },
++              border      = { style = "rounded" },
++              win_options = { winblend = 15 },
+             },
+-
+-            -- ── Footer ──────────────────────────────────────
+-            -- Plugin count + startup time from lazy — useful to spot regressions
+-            -- after adding a heavy plugin
+-            footer = {
+-              "",
+-              string.format("󱐌  %d plugins · ⚡ %dms startup", stats.count, ms),
++            popupmenu = {
++              relative    = "editor",
++              position    = { row = "55%", col = "50%" },
++              size        = { width = 64, height = 10 },
++              border      = { style = "rounded" },
++              win_options = { winblend = 15 },
+             },
+           },
+         })
+diff --git a/tmux/tmux.conf b/tmux/tmux.conf
+index 91a7f9a..ca71ae1 100644
+--- a/tmux/tmux.conf
++++ b/tmux/tmux.conf
+@@ -164,7 +164,8 @@ set -g @plugin 'tmux-plugins/tmux-sensible'
+ #   Saves: windows, panes, layout, working dirs, running programs
+ set -g @plugin 'tmux-plugins/tmux-resurrect'
+ set -g @resurrect-capture-pane-contents 'on'   # save pane content too
+-set -g @resurrect-strategy-nvim 'session'       # restore nvim sessions via persistence.nvim
++# @resurrect-strategy-nvim removed — it passed nvim buffers as args on restore
++# which broke dashboard (argc became 1). Session restore is manual via <leader>S.
+ 
+ # tmux-continuum — automatic session saving + restore on tmux start
+ #   Saves every 15 minutes automatically, no manual Prefix+Ctrl+s needed
+diff --git a/zsh/zshrc b/zsh/zshrc
+index 9de026a..f1aaadd 100644
+--- a/zsh/zshrc
++++ b/zsh/zshrc
+@@ -1705,18 +1705,17 @@ ts() {
+   if tmux has-session -t "$name" 2>/dev/null; then
+     tmux attach-session -t "$name"
+   else
+-    # Build the session with core windows first
+-    tmux new-session  -d -s "$name" -c "$PWD" -n "editor" "zsh -ic 'nvim .; exec zsh'" \; \
+-      new-window      -n "terminal" -c "$PWD"                \; \
+-      new-window      -n "logs"     -c "$PWD"
+-
+-    # WSL only: add a cmd.exe window for Windows interop
+-    if grep -qi microsoft /proc/version 2>/dev/null; then
+-      tmux new-window -t "$name" -n "cmd" -c "$PWD" "cmd.exe"
+-    fi
+-
+-    tmux select-window   -t "$name:1" \; \
+-         attach-session  -t "$name"
++    local is_wsl=false
++    grep -qi microsoft /proc/version 2>/dev/null && is_wsl=true
++
++    local cmd="tmux new-session -d -s '$name' -c '$PWD' -n 'editor' \"zsh -ic 'nvim; exec zsh'\""
++    cmd+=" \; new-window -n 'terminal' -c '$PWD'"
++    cmd+=" \; new-window -n 'logs' -c '$PWD'"
++    [[ "$is_wsl" == true ]] && cmd+=" \; new-window -n 'cmd' -c '$PWD' 'cmd.exe'"
++    cmd+=" \; new-window -n 'agent' -c '$PWD' \"zsh -ic 'claude --name $name; exec zsh'\""
++    cmd+=" \; select-window -t '$name:1'"
++    cmd+=" \; attach-session -t '$name'"
++    eval "$cmd"
+   fi
+ }
+ 
+@@ -1835,6 +1834,14 @@ if grep -qi microsoft /proc/version 2>/dev/null; then
+     wslpath -w "${1:-$PWD}"
+   }
+ 
++  # claude — Claude Code is installed on Windows, call it via cmd.exe.
++  # Passes all arguments through so `claude -p "question"` etc. still work.
++  # Usage: claude            → interactive session
++  #        claude -p "q"     → one-shot answer
++  claude() {
++    cmd.exe /c "claude $*"
++  }
++
+ fi
+ 
+ # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━

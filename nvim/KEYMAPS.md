@@ -8,18 +8,22 @@ Leader key: `Space`
 
 | Key | Action |
 |-----|--------|
-| `<leader>w` | Save file |
-| `<leader>q` | Quit |
-| `<leader>Q` | Force quit all |
-| `<leader>l` | Open Lazy plugin manager |
-| `<Esc>` | Clear search highlights |
+| `SPC w` | Save file |
+| `SPC q` | Quit |
+| `SPC Q` | Force quit all |
+| `SPC l` | Open Lazy plugin manager |
+| `SPC m` | Open Mason (LSP server manager) |
+| `SPC n` | Toggle file tree (nvim-tree) |
+| `SPC e` | File browser (Telescope) |
+| `SPC S` | Restore session for current directory |
+| `Esc` | Clear search highlights |
 | `jk` | Exit insert mode |
 
 ---
 
 ## Navigation
 
-### Windows / Splits
+### Splits
 | Key | Action |
 |-----|--------|
 | `Ctrl+h/j/k/l` | Move between splits |
@@ -31,44 +35,60 @@ Leader key: `Space`
 |-----|--------|
 | `Shift+l` | Next buffer |
 | `Shift+h` | Previous buffer |
-| `<leader>x` | Close buffer (keeps window layout) |
+| `SPC x` | Close buffer (keeps window layout) |
 
-### Scrolling
+### Scrolling / Search
 | Key | Action |
 |-----|--------|
-| `Ctrl+d` | Scroll down (centered) |
-| `Ctrl+u` | Scroll up (centered) |
-| `n / N` | Next/prev search result (centered) |
+| `Ctrl+d` | Scroll down (re-centres cursor) |
+| `Ctrl+u` | Scroll up (re-centres cursor) |
+| `n / N` | Next / prev search match (re-centred) |
+
+### References (vim-illuminate)
+| Key | Action |
+|-----|--------|
+| `]]` | Next occurrence of word under cursor |
+| `[[` | Previous occurrence of word under cursor |
 
 ---
 
-## Telescope (Fuzzy Finder)
+## Telescope
+
+All bindings are under `SPC t`.
 
 | Key | Action |
 |-----|--------|
-| `<leader>f` | Find files |
-| `<leader>g` | Live grep (search text) |
-| `<leader>b` | Open buffers |
-| `<leader>h` | Help tags |
-| `<leader>r` | Recent files |
-| `<leader>c` | Git commits |
-| `<leader>p` | Projects |
-| `<leader>fb` | File browser (current file's directory) |
+| `SPC tf` | Find files |
+| `SPC tr` | Recent files |
+| `SPC tg` | Live grep |
+| `SPC tw` | Grep word under cursor |
+| `SPC te` | File browser |
+| `SPC tb` | Open buffers |
+| `SPC tj` | Jump list |
+| `SPC tm` | Marks |
+| `SPC ts` | Symbols in file (LSP) |
+| `SPC td` | Diagnostics |
+| `SPC tc` | Git commits |
+| `SPC tp` | Projects |
+| `SPC th` | Help tags |
+| `SPC tk` | Keymaps |
 
 ### Inside Telescope
 | Key | Action |
 |-----|--------|
-| `Ctrl+j/k` | Move selection down/up |
+| `Ctrl+j/k` | Move selection down / up |
 | `Ctrl+q` | Send selection to quickfix list |
 | `Esc` | Close |
 
 ---
 
-## File Explorer (nvim-tree)
+## File Tree (nvim-tree)
 
 | Key | Action |
 |-----|--------|
-| `<leader>e` | Toggle file explorer |
+| `SPC n` | Toggle sidebar |
+| `R` | Refresh tree manually |
+| Standard nvim-tree keys apply inside the tree |
 
 ---
 
@@ -77,21 +97,26 @@ Leader key: `Space`
 | Key | Action |
 |-----|--------|
 | `Ctrl+\` | Toggle floating terminal |
-| `Ctrl+h/j/k/l` | Move from terminal to split |
+| `Ctrl+h/j/k/l` | Navigate from terminal to split |
 
 ---
 
 ## Git
 
+### Fugitive
 | Key | Action |
 |-----|--------|
-| `<leader>gs` | Git status (fugitive) |
-| `<leader>gd` | Git diff split |
-| `]h` | Next git hunk |
-| `[h` | Previous git hunk |
-| `<leader>hs` | Stage hunk |
-| `<leader>hr` | Reset hunk |
-| `<leader>tb` | Toggle inline git blame |
+| `SPC gs` | Git status (interactive fugitive buffer) |
+| `SPC gd` | Git diff split |
+
+### Gitsigns (hunk operations)
+| Key | Action |
+|-----|--------|
+| `]h` | Next hunk |
+| `[h` | Previous hunk |
+| `SPC hs` | Stage hunk |
+| `SPC hr` | Reset hunk |
+| `SPC gb` | Toggle inline git blame |
 
 ---
 
@@ -103,18 +128,19 @@ Leader key: `Space`
 | `gD` | Go to declaration |
 | `gi` | Go to implementation |
 | `gr` | References |
-| `K` | Hover docs |
-| `<leader>ls` | Signature help |
+| `K` | Hover documentation |
 | `gl` | Show diagnostic float |
-| `<leader>lj` | Next diagnostic |
-| `<leader>lk` | Previous diagnostic |
-| `<leader>lq` | Buffer diagnostics (Trouble) |
-| `<leader>lt` | Workspace diagnostics (Trouble) |
-| `<leader>la` | Code action |
-| `<leader>lr` | Rename symbol |
-| `<leader>lf` | Format file |
-| `<leader>li` | LSP info |
-| `<leader>m` | Mason (server manager) |
+| `SPC la` | Code action |
+| `SPC lr` | Rename symbol |
+| `SPC lf` | Format file |
+| `SPC ls` | Signature help |
+| `SPC li` | LSP info |
+| `SPC lj` | Next diagnostic |
+| `SPC lk` | Previous diagnostic |
+| `SPC lq` | Buffer diagnostics (Trouble) |
+| `SPC lt` | Workspace diagnostics (Trouble) |
+| `SPC ts` | Symbols picker (Telescope) |
+| `SPC td` | Diagnostics picker (Telescope) |
 
 ---
 
@@ -122,12 +148,40 @@ Leader key: `Space`
 
 | Key | Action |
 |-----|--------|
-| `Ctrl+j/k` | Next/prev item |
+| `Ctrl+j/k` | Next / prev item |
 | `Ctrl+Space` | Trigger completion |
-| `Ctrl+b/f` | Scroll docs |
+| `Ctrl+b/f` | Scroll docs up / down |
 | `Ctrl+e` | Dismiss menu |
 | `Enter` | Confirm selected item |
-| `Tab / Shift+Tab` | Next/prev item or jump snippet placeholder |
+| `Tab / Shift+Tab` | Next / prev item or jump snippet placeholder |
+
+---
+
+## Editing
+
+### Comments (Comment.nvim)
+| Key | Action |
+|-----|--------|
+| `gcc` | Toggle line comment |
+| `gc` + motion | Toggle comment over motion |
+| `gc` (visual) | Toggle comment on selection |
+
+### Move Lines
+| Key | Action |
+|-----|--------|
+| `Alt+j` | Move line / selection down |
+| `Alt+k` | Move line / selection up |
+
+### Visual Mode
+| Key | Action |
+|-----|--------|
+| `< / >` | Indent / dedent and stay in visual |
+| `p` | Paste without overwriting register |
+
+### Autopairs
+| Key | Action |
+|-----|--------|
+| `Alt+e` | Fast wrap — wrap next word with pending pair |
 
 ---
 
@@ -136,42 +190,23 @@ Leader key: `Space`
 ### Select
 | Key | Action |
 |-----|--------|
-| `af / if` | Around/inside function |
-| `ac / ic` | Around/inside class |
-| `aa / ia` | Around/inside argument |
-| `ab / ib` | Around/inside block |
+| `af / if` | Around / inside function |
+| `ac / ic` | Around / inside class |
+| `aa / ia` | Around / inside argument |
+| `ab / ib` | Around / inside block |
 
 ### Move
 | Key | Action |
 |-----|--------|
-| `]f / [f` | Next/prev function start |
-| `]F / [F` | Next/prev function end |
-| `]c / [c` | Next/prev class |
+| `]f / [f` | Next / prev function start |
+| `]F / [F` | Next / prev function end |
+| `]c / [c` | Next / prev class |
 
 ### Swap
 | Key | Action |
 |-----|--------|
-| `<leader>sa` | Swap argument with next |
-| `<leader>sA` | Swap argument with previous |
-
----
-
-## References (vim-illuminate)
-
-| Key | Action |
-|-----|--------|
-| `]]` | Next reference of word under cursor |
-| `[[` | Previous reference of word under cursor |
-
----
-
-## Movement (Visual Mode)
-
-| Key | Action |
-|-----|--------|
-| `Alt+j/k` | Move selected lines down/up |
-| `< / >` | Indent/dedent and reselect |
-| `p` | Paste without overwriting register |
+| `SPC sa` | Swap argument with next |
+| `SPC sA` | Swap argument with previous |
 
 ---
 
@@ -179,4 +214,29 @@ Leader key: `Space`
 
 | Key | Action |
 |-----|--------|
-| `<leader>S` | Restore last session for current directory |
+| `SPC S` | Restore last session for current directory |
+
+---
+
+## Tmux (prefix = `Ctrl+Space`)
+
+| Key | Action |
+|-----|--------|
+| `Prefix+\|` | Vertical split |
+| `Prefix+-` | Horizontal split |
+| `Prefix+c` | New window |
+| `Prefix+,` | Rename window |
+| `Prefix+h/j/k/l` | Navigate panes |
+| `Prefix+H/J/K/L` | Resize panes |
+| `Ctrl+h/l` | Previous / next window (with prefix) |
+| `Alt+h/l` | Previous / next window (no prefix needed) |
+| `Prefix+x` | Kill pane |
+| `Prefix+X` | Kill window |
+| `Prefix+r` | Reload tmux config |
+| `Prefix+Enter` | Enter copy mode |
+| `v` | Begin selection (copy mode) |
+| `y` | Copy selection (copy mode) |
+| `Prefix+p` | Paste |
+| `Prefix+Ctrl+s` | Save session (tmux-resurrect) |
+| `Prefix+Ctrl+r` | Restore session (tmux-resurrect) |
+| `Prefix+I` | Install plugins (TPM) |

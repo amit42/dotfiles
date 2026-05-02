@@ -148,6 +148,16 @@ config.animation_fps = 60
 config.front_end = "WebGpu"    -- GPU-accelerated rendering (faster than OpenGL)
 
 -- ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+-- OPTION KEY (macOS)
+-- ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+-- By default macOS Option+key sends composed Unicode (Option+h = ˙).
+-- Setting to "EscapeCode" makes left Option send ESC+key instead,
+-- which is what tmux/vim expect for Alt/Meta bindings (e.g. M-h, M-l).
+-- Right Option keeps its default so you can still type special chars.
+config.send_composed_key_when_left_alt_is_pressed  = false
+config.send_composed_key_when_right_alt_is_pressed = true
+
+-- ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 -- MISC
 -- ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 config.audible_bell = "Disabled"          -- no bell sounds

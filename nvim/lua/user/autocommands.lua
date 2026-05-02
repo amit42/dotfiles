@@ -142,6 +142,60 @@ local function augroup(name)
     end,
   })
   
+  -- ── Telescope Window Overrides ───────────────────────────
+  -- sidescrolloff=8 (options.lua) causes telescope results to scroll right
+  -- because entries are padded to fill the window. Zero it out only for
+  -- telescope buffers so other windows keep their margin.
+  vim.api.nvim_create_autocmd("FileType", {
+    group = augroup("telescope_win_opts"),
+    pattern = { "TelescopeResults", "TelescopePrompt", "TelescopePreview" },
+    callback = function()
+      vim.opt_local.sidescrolloff = 0
+      vim.opt_local.scrolloff     = 0
+    end,
+  })
+
+  -- ── Show Dashboard on Startup ─────────────────────────────
+  -- Handles: nvim (empty), nvim . (directory), nvim-tree restored by resurrect.
+  -- Deferred 100ms so all plugins (dashboard, nvim-tree) are fully loaded.
+  vim.api.nvim_create_autocmd("VimEnter", {
+    group = augroup("startup_dashboard"),
+    once  = true,
+    callback = function()
+      vim.defer_fn(function()
+        local ft      = vim.bo.filetype
+        local bufname = vim.api.nvim_buf_get_name(0)
+        local is_empty = bufname == "" and (ft == "" or ft == "dashboard")
+        local is_dir   = vim.fn.isdirectory(bufname) == 1
+        local is_tree  = ft == "NvimTree"
+
+        if is_empty or is_dir or is_tree then
+          if is_dir then vim.cmd("cd " .. vim.fn.fnameescape(bufname)) end
+          pcall(vim.cmd, "NvimTreeClose")
+          require("user.dashboard").open()
+        end
+      end, 100)
+    end,
+  })
+
+  -- ── Dashboard on Last Buffer Close ────────────────────────
+  -- When the last real (listed) buffer is deleted, show the dashboard
+  -- instead of leaving an empty unnamed buffer.
+  vim.api.nvim_create_autocmd("BufDelete", {
+    group = augroup("dashboard_on_last_buffer"),
+    callback = function(event)
+      if not vim.bo[event.buf].buflisted then return end
+      vim.schedule(function()
+        local bufs = vim.tbl_filter(function(b)
+          return vim.bo[b].buflisted and vim.api.nvim_buf_is_valid(b)
+        end, vim.api.nvim_list_bufs())
+        if #bufs == 0 then
+          require("user.dashboard").open()
+        end
+      end)
+    end,
+  })
+
   -- ── Auto Create Dir on Save ───────────────────────────────
   -- If you save a file in a folder that doesn't exist
   -- automatically create the folder

@@ -21,30 +21,102 @@ return {
       },
       config = function()
         local telescope = require("telescope")
-        local actions = require("telescope.actions")
-  
+        local actions   = require("telescope.actions")
+
+        -- Custom directory previewer: shows contents with devicons, same look as the
+        -- file browser entry list. Files fall through to telescope's default previewer.
+        local function make_fb_previewer()
+          local previewers  = require("telescope.previewers")
+          local conf        = require("telescope.config").values
+          local _, devicons = pcall(require, "nvim-web-devicons")
+          local uv          = vim.uv or vim.loop
+          local dir_icon    = "\xef\x90\x93 "   -- U+F413 nerd-font folder
+
+          return previewers.new_buffer_previewer({
+            define_preview = function(self, entry)
+              local bufnr    = self.state.bufnr
+              local filepath = tostring(entry.path or entry.filename or "")
+              if filepath == "" then return end
+
+              local stat = uv.fs_stat(filepath)
+              if not stat then return end
+
+              if stat.type ~= "directory" then
+                conf.buffer_previewer_maker(filepath, bufnr, {
+                  bufname = self.state.bufname,
+                  winid   = self.state.winid,
+                  preview = conf.preview or {},
+                })
+                return
+              end
+
+              local dirs, files = {}, {}
+              local scan = uv.fs_scandir(filepath)
+              if not scan then return end
+              while true do
+                local name, ftype = uv.fs_scandir_next(scan)
+                if not name then break end
+                if ftype == "link" then
+                  local s = uv.fs_stat(filepath .. "/" .. name)
+                  ftype = s and s.type or "file"
+                end
+                if ftype == "directory" then table.insert(dirs, name)
+                else table.insert(files, name) end
+              end
+              table.sort(dirs)
+              table.sort(files)
+
+              local lines, hls = {}, {}
+              for _, name in ipairs(dirs) do
+                table.insert(lines, dir_icon .. name .. "/")
+                table.insert(hls, { "TelescopePreviewDirectory", #lines - 1, 0, -1 })
+              end
+              for _, name in ipairs(files) do
+                local icon, hl_grp = "  ", "Normal"
+                if devicons then
+                  local i, g = devicons.get_icon(name, name:match("%.([^%.]+)$"), { default = true })
+                  if i then icon = i .. " "; hl_grp = g or "Normal" end
+                end
+                table.insert(lines, icon .. name)
+                local ib = #icon
+                table.insert(hls, { hl_grp,  #lines - 1, 0,  ib })
+                table.insert(hls, { "Normal", #lines - 1, ib, -1 })
+              end
+
+              vim.api.nvim_buf_set_lines(bufnr, 0, -1, false, lines)
+              for _, h in ipairs(hls) do
+                vim.api.nvim_buf_add_highlight(bufnr, 0, h[1], h[2], h[3], h[4])
+              end
+            end,
+          })
+        end
+
         telescope.setup({
           extensions = {
-            -- ui-select replaces vim.ui.select globally
-            -- dropdown theme fits code action lists better than the default popup
             ["ui-select"] = {
               require("telescope.themes").get_dropdown(),
             },
+            file_browser = {
+              display_stat = false,
+              git_status   = false,  -- git icons have variable cell width; disabling prevents entry shifting
+              grouped      = true,
+              path_display = { "tail" },
+            },
           },
           defaults = {
-            prompt_prefix = " ",         -- search icon in prompt
-            selection_caret = " ",       -- arrow on selected item
-            path_display = { "smart" },   -- smart path shortening
-            file_ignore_patterns = {      -- never show these in results
+            prompt_prefix  = " ",
+            selection_caret = " ",
+            entry_prefix   = " ",          -- must match selection_caret width
+            path_display   = { "truncate" }, -- paths relative to cwd, no ../ artifacts
+            file_ignore_patterns = {
               "node_modules",
               ".git/",
-              "*.o",                      -- compiled objects (embedded)
-              "*.elf",                    -- embedded binaries
+              "*.o",
+              "*.elf",
               "build/",
             },
             mappings = {
               i = {
-                -- inside telescope input
                 ["<C-k>"] = actions.move_selection_previous,
                 ["<C-j>"] = actions.move_selection_next,
                 ["<C-q>"] = actions.send_selected_to_qflist + actions.open_qflist,
@@ -53,41 +125,63 @@ return {
             },
           },
           pickers = {
-            find_files = {
-              hidden = true,             -- show hidden files (dotfiles)
-            },
+            find_files = { hidden = true },
           },
         })
-  
-        -- Load fzf extension for faster sorting
+
         telescope.load_extension("fzf")
-        -- Load project.nvim extension for the projects picker
         telescope.load_extension("projects")
-        -- Load file browser extension
         telescope.load_extension("file_browser")
-        -- Replace vim.ui.select with telescope dropdown
-        -- Makes code actions, LSP rename, etc. use telescope UI
         telescope.load_extension("ui-select")
 
         -- ── Telescope Keymaps ──────────────────────────────
-        local map = vim.keymap.set
-        local opts = { noremap = true, silent = true }
+        -- All under <leader>t
+        local map     = vim.keymap.set
+        local opts    = { noremap = true, silent = true }
+        local builtin = require("telescope.builtin")
 
-        map("n", "<leader>f", ":Telescope find_files<CR>",    opts)  -- find files
-        map("n", "<leader>g", ":Telescope live_grep<CR>",     opts)  -- search text
-        map("n", "<leader>b", ":Telescope buffers<CR>",       opts)  -- open buffers
-        map("n", "<leader>h", ":Telescope help_tags<CR>",     opts)  -- help tags
-        map("n", "<leader>r", ":Telescope oldfiles<CR>",      opts)  -- recent files
-        map("n", "<leader>c", ":Telescope git_commits<CR>",   opts)  -- git commits
-        map("n", "<leader>p", ":Telescope projects<CR>",      opts)  -- projects
-        -- file browser opens at the directory of the current file
-        map("n", "<leader>fb", ":Telescope file_browser path=%:p:h select_buffer=true<CR>", opts)
+        local function file_browser()
+          require("telescope").extensions.file_browser.file_browser({
+            display_stat = false,
+            git_status   = false,
+            grouped      = true,
+            path_display = { "tail" },
+            previewer    = make_fb_previewer(),
+          })
+        end
+
+        -- Files
+        map("n", "<leader>tf", builtin.find_files,   opts)
+        map("n", "<leader>tr", builtin.oldfiles,     opts)
+        map("n", "<leader>te", file_browser,         opts)
+
+        -- Search
+        map("n", "<leader>tg", builtin.live_grep,    opts)
+        map("n", "<leader>tw", builtin.grep_string,  opts)
+
+        -- Buffers / Navigation
+        map("n", "<leader>tb", builtin.buffers,                opts)
+        map("n", "<leader>tj", builtin.jumplist,               opts)
+        map("n", "<leader>tm", builtin.marks,                  opts)
+
+        -- LSP
+        map("n", "<leader>ts", builtin.lsp_document_symbols,   opts)
+        map("n", "<leader>td", builtin.diagnostics,            opts)
+
+        -- Git / Meta
+        map("n", "<leader>tc", builtin.git_commits,            opts)
+        map("n", "<leader>tp", ":Telescope projects<CR>",      opts)
+        map("n", "<leader>th", builtin.help_tags,              opts)
+        map("n", "<leader>tk", builtin.keymaps,                opts)
+
+        -- Space+e → file browser (quick access without full <leader>te)
+        map("n", "<leader>e", file_browser, opts)
       end,
     },
   
     -- ── File Explorer ──────────────────────────────────────
     -- nvim-tree — sidebar file browser
-    -- toggle with Space+e
+    -- Space+n toggles the sidebar, Space+e opens telescope file browser
     {
       "nvim-tree/nvim-tree.lua",
       dependencies = {
@@ -100,6 +194,7 @@ return {
         vim.g.loaded_netrwPlugin = 1
   
         require("nvim-tree").setup({
+          hijack_directories = { enable = false },  -- let VimEnter autocmd handle nvim . → dashboard
           view = {
             width = 30,                  -- sidebar width
             side = "left",
@@ -134,10 +229,8 @@ return {
           end,
         })
   
-        -- Toggle file explorer
-        vim.keymap.set("n", "<leader>e",
-          ":NvimTreeToggle<CR>",
-          { noremap = true, silent = true })
+        vim.keymap.set("n", "<leader>n", ":NvimTreeToggle<CR>",
+          { noremap = true, silent = true, desc = "Toggle file tree" })
       end,
     },
   
@@ -194,7 +287,7 @@ return {
             changedelete = { text = "▎" },
           },
           current_line_blame = false,    -- show git blame on current line
-                                         -- toggle with Space+tb
+                                         -- toggle with Space+gb
           on_attach = function(bufnr)
             local map = vim.keymap.set
             local opts = { buffer = bufnr, noremap = true, silent = true }
@@ -208,7 +301,7 @@ return {
             map("n", "<leader>hr", ":Gitsigns reset_hunk<CR>", opts)
   
             -- Toggle line blame
-            map("n", "<leader>tb", ":Gitsigns toggle_current_line_blame<CR>", opts)
+            map("n", "<leader>gb", ":Gitsigns toggle_current_line_blame<CR>", opts)
           end,
         })
       end,
@@ -232,27 +325,33 @@ return {
         -- Register keymap groups
         -- So which-key shows group names not just keys
         require("which-key").add({
-          { "<leader>f", desc = "Find files" },
-          { "<leader>g", desc = "Live grep" },
-          { "<leader>b", desc = "Buffers" },
-          { "<leader>e", desc = "Explorer" },
-          { "<leader>w", desc = "Save" },
-          { "<leader>q", desc = "Quit" },
-          { "<leader>l", desc = "Lazy" },
-          { "<leader>h", desc = "Help" },
-          { "<leader>r", desc = "Recent files" },
-          { "<leader>c", desc = "Git commits" },
-          { "<leader>p",  desc = "Projects" },
+          { "<leader>e",  desc = "File browser (telescope)" },
+          { "<leader>n",  desc = "Toggle file tree" },
+          { "<leader>w",  desc = "Save" },
+          { "<leader>q",  desc = "Quit" },
           { "<leader>S",  desc = "Restore session" },
-          { "<leader>fb", desc = "File browser" },
           { "<leader>g",  group = "Git" },
           { "<leader>gs", desc = "Git status (fugitive)" },
           { "<leader>gd", desc = "Git diff split" },
+          { "<leader>gb", desc = "Toggle blame" },
           { "<leader>l",  group = "LSP" },
           { "<leader>lq", desc = "Buffer diagnostics (trouble)" },
           { "<leader>lt", desc = "Workspace diagnostics (trouble)" },
-          { "<leader>t",  group = "Toggle" },
-          { "<leader>tb", desc = "Toggle blame" },
+          { "<leader>t",  group = "Telescope" },
+          { "<leader>tf", desc = "Find files" },
+          { "<leader>tr", desc = "Recent files" },
+          { "<leader>te", desc = "File browser" },
+          { "<leader>tg", desc = "Live grep" },
+          { "<leader>tw", desc = "Grep word under cursor" },
+          { "<leader>tb", desc = "Open buffers" },
+          { "<leader>tj", desc = "Jump list" },
+          { "<leader>tm", desc = "Marks" },
+          { "<leader>ts", desc = "Symbols in file" },
+          { "<leader>td", desc = "Diagnostics" },
+          { "<leader>tc", desc = "Git commits" },
+          { "<leader>tp", desc = "Projects" },
+          { "<leader>th", desc = "Help tags" },
+          { "<leader>tk", desc = "Keymaps" },
         })
       end,
     },

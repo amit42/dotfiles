@@ -92,3 +92,8 @@ local options = {
                                            -- for w, b, e motions
   vim.opt.formatoptions:remove { "c", "r", "o" }  -- don't auto insert comment
                                                    -- leader on new lines
+
+  -- exrc: auto-load .nvim.lua from the project root when nvim starts there.
+  -- secure: only runs if owned by you — prevents malicious project configs.
+  vim.opt.exrc   = true
+  vim.opt.secure = true

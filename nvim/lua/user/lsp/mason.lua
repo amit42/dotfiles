@@ -27,6 +27,10 @@ local servers = {
 require("mason").setup({
   ui = {
     border = "rounded",
+    providers = {
+      "mason.providers.registry-api",
+      "mason.providers.client",
+    },
     icons  = {
       package_installed   = "✓",
       package_pending     = "➜",
