@@ -68,11 +68,25 @@ local C4 = {
   { "Alt+e",     "Fast wrap"        },
 }
 
--- ── Logo ─────────────────────────────────────────────────────────────
+-- ── Logos ────────────────────────────────────────────────────────────
+-- Two sizes chosen at render time based on usable terminal height.
+-- LOGO_LG uses the standard NVIM block-drawing art; LOGO_SM is the
+-- current single-line dot form for small/narrow terminals.
 
-local LOGO = {
-  "·  n v i m  ·",
+local LOGO_SM = { "\xc2\xb7  n v i m  \xc2\xb7" }  -- "·  n v i m  ·"
+
+local LOGO_LG = {
+  "  \xe2\x96\x88\xe2\x96\x88\xe2\x96\x88\xe2\x95\x97   \xe2\x96\x88\xe2\x96\x88\xe2\x95\x97\xe2\x96\x88\xe2\x96\x88\xe2\x95\x97   \xe2\x96\x88\xe2\x96\x88\xe2\x95\x97\xe2\x96\x88\xe2\x96\x88\xe2\x95\x97\xe2\x96\x88\xe2\x96\x88\xe2\x96\x88\xe2\x95\x97   \xe2\x96\x88\xe2\x96\x88\xe2\x96\x88\xe2\x95\x97  ",
+  "  \xe2\x96\x88\xe2\x96\x88\xe2\x96\x88\xe2\x96\x88\xe2\x95\x97  \xe2\x96\x88\xe2\x96\x88\xe2\x95\x91\xe2\x96\x88\xe2\x96\x88\xe2\x95\x91   \xe2\x96\x88\xe2\x96\x88\xe2\x95\x91\xe2\x96\x88\xe2\x96\x88\xe2\x95\x91\xe2\x96\x88\xe2\x96\x88\xe2\x96\x88\xe2\x96\x88\xe2\x95\x97 \xe2\x96\x88\xe2\x96\x88\xe2\x96\x88\xe2\x96\x88\xe2\x95\x91  ",
+  "  \xe2\x96\x88\xe2\x96\x88\xe2\x95\x94\xe2\x96\x88\xe2\x96\x88\xe2\x95\x97 \xe2\x96\x88\xe2\x96\x88\xe2\x95\x91\xe2\x95\x9a\xe2\x96\x88\xe2\x96\x88\xe2\x95\x97 \xe2\x96\x88\xe2\x96\x88\xe2\x95\x94\xe2\x95\x9d\xe2\x96\x88\xe2\x96\x88\xe2\x95\x91\xe2\x96\x88\xe2\x96\x88\xe2\x95\x94\xe2\x96\x88\xe2\x96\x88\xe2\x96\x88\xe2\x96\x88\xe2\x95\x94\xe2\x96\x88\xe2\x96\x88\xe2\x95\x91  ",
+  "  \xe2\x96\x88\xe2\x96\x88\xe2\x95\x91\xe2\x95\x9a\xe2\x96\x88\xe2\x96\x88\xe2\x95\x97\xe2\x96\x88\xe2\x96\x88\xe2\x95\x91 \xe2\x95\x9a\xe2\x96\x88\xe2\x96\x88\xe2\x96\x88\xe2\x96\x88\xe2\x95\x94\xe2\x95\x9d \xe2\x96\x88\xe2\x96\x88\xe2\x95\x91\xe2\x96\x88\xe2\x96\x88\xe2\x95\x91\xe2\x95\x9a\xe2\x96\x88\xe2\x96\x88\xe2\x95\x94\xe2\x95\x9d\xe2\x96\x88\xe2\x96\x88\xe2\x95\x91  ",
+  "  \xe2\x96\x88\xe2\x96\x88\xe2\x95\x91 \xe2\x95\x9a\xe2\x96\x88\xe2\x96\x88\xe2\x96\x88\xe2\x96\x88\xe2\x95\x91  \xe2\x95\x9a\xe2\x96\x88\xe2\x96\x88\xe2\x95\x94\xe2\x95\x9d  \xe2\x96\x88\xe2\x96\x88\xe2\x95\x91\xe2\x96\x88\xe2\x96\x88\xe2\x95\x91 \xe2\x95\x9a\xe2\x95\x90\xe2\x95\x9d \xe2\x96\x88\xe2\x96\x88\xe2\x95\x91  ",
+  "  \xe2\x95\x9a\xe2\x95\x90\xe2\x95\x9d  \xe2\x95\x9a\xe2\x95\x90\xe2\x95\x90\xe2\x95\x90\xe2\x95\x9d   \xe2\x95\x9a\xe2\x95\x90\xe2\x95\x9d   \xe2\x95\x9a\xe2\x95\x90\xe2\x95\x9d\xe2\x95\x9a\xe2\x95\x90\xe2\x95\x9d     \xe2\x95\x9a\xe2\x95\x90\xe2\x95\x9d  ",
 }
+
+local function select_logo(th)
+  return th >= 35 and LOGO_LG or LOGO_SM
+end
 
 -- ── Geometry ─────────────────────────────────────────────────────────
 
@@ -89,18 +103,20 @@ local DIV_B = #DIV  -- 5
 
 -- ── Colours (catppuccin-mocha) ────────────────────────────────────────
 
+local GRAD = { "DashGrad1", "DashGrad2", "DashGrad3", "DashGrad4", "DashGrad5", "DashGrad6" }
+
 local function setup_hl()
   vim.api.nvim_set_hl(0, "DashTitle",   { fg = "#cba6f7" })
   vim.api.nvim_set_hl(0, "DashSection", { fg = "#cba6f7", bold = true })
   vim.api.nvim_set_hl(0, "DashKey",     { fg = "#fab387" })
   vim.api.nvim_set_hl(0, "DashColDiv",  { fg = "#45475a" })
-  -- Logo gradient: · n v i m · — blue → sapphire → sky → mauve → pink → rosewater
-  vim.api.nvim_set_hl(0, "DashGrad1",   { fg = "#89b4fa" })  -- blue      ·
-  vim.api.nvim_set_hl(0, "DashGrad2",   { fg = "#74c7ec" })  -- sapphire  n
-  vim.api.nvim_set_hl(0, "DashGrad3",   { fg = "#89dceb" })  -- sky       v
-  vim.api.nvim_set_hl(0, "DashGrad4",   { fg = "#cba6f7" })  -- mauve     i
-  vim.api.nvim_set_hl(0, "DashGrad5",   { fg = "#f5c2e7" })  -- pink      m
-  vim.api.nvim_set_hl(0, "DashGrad6",   { fg = "#f5e0dc" })  -- rosewater ·
+  -- Logo gradient: blue → sapphire → sky → mauve → pink → rosewater
+  vim.api.nvim_set_hl(0, "DashGrad1",   { fg = "#89b4fa" })  -- blue
+  vim.api.nvim_set_hl(0, "DashGrad2",   { fg = "#74c7ec" })  -- sapphire
+  vim.api.nvim_set_hl(0, "DashGrad3",   { fg = "#89dceb" })  -- sky
+  vim.api.nvim_set_hl(0, "DashGrad4",   { fg = "#cba6f7" })  -- mauve
+  vim.api.nvim_set_hl(0, "DashGrad5",   { fg = "#f5c2e7" })  -- pink
+  vim.api.nvim_set_hl(0, "DashGrad6",   { fg = "#f5e0dc" })  -- rosewater
 end
 
 -- ── Helpers ──────────────────────────────────────────────────────────
@@ -133,13 +149,18 @@ function M.build()
   local tw = vim.o.columns
   local th = vim.o.lines - vim.o.cmdheight - 1
 
+  local LOGO = select_logo(th)
+
   -- Block indent (centres the 125-cell grid)
   local bi     = math.max(0, math.floor((tw - BLOCK_W) / 2))
   local indent = string.rep(" ", bi)
 
-  -- Logo centering: centre within the same block
-  local logo_dw  = vim.fn.strdisplaywidth(LOGO[1])
-  local logo_pad = math.max(0, math.floor((BLOCK_W - logo_dw) / 2))
+  -- Logo centering: use the widest line
+  local logo_max_dw = 0
+  for _, line in ipairs(LOGO) do
+    logo_max_dw = math.max(logo_max_dw, vim.fn.strdisplaywidth(line))
+  end
+  local logo_pad = math.max(0, math.floor((BLOCK_W - logo_max_dw) / 2))
 
   -- Grid row count
   local cols = { C1, C2, C3, C4 }
@@ -147,27 +168,39 @@ function M.build()
   for _, c in ipairs(cols) do n = math.max(n, #c) end
 
   -- Vertical placement: upper third
-  local inner_h = #LOGO + 2 + n   -- logo + 2 blanks + grid
-  local vpad    = math.max(1, math.floor((th - inner_h) / 3))
+  -- gap between logo and grid grows by 1 on tall terminals
+  local logo_gap = (th >= 50) and 3 or 2
+  local inner_h  = #LOGO + logo_gap + n
+  local vpad     = math.max(1, math.floor((th - inner_h) / 3))
 
   -- ── top padding ──────────────────────────────────────────────────
   for _ = 1, vpad do emit("") end
 
   -- ── logo ─────────────────────────────────────────────────────────
-  for _, line in ipairs(LOGO) do
+  -- Single-line: per-character gradient on the 6 visible glyphs.
+  -- Multi-line:  one gradient colour per row spread across the palette.
+  --
+  -- LOGO_SM byte map (· = U+00B7, 2 bytes UTF-8):
+  --   0-1:·  2-3:sp  4:n  5:sp  6:v  7:sp  8:i  9:sp  10:m  11-12:sp  13-14:·
+  local nlogo = #LOGO
+  for li, line in ipairs(LOGO) do
     local logo_lnum = lnum
     emit(indent .. string.rep(" ", logo_pad) .. line)
     local o = bi + logo_pad
-    hl("DashGrad1", logo_lnum, o + 0,  o + 2)
-    hl("DashGrad2", logo_lnum, o + 4,  o + 5)
-    hl("DashGrad3", logo_lnum, o + 6,  o + 7)
-    hl("DashGrad4", logo_lnum, o + 8,  o + 9)
-    hl("DashGrad5", logo_lnum, o + 10, o + 11)
-    hl("DashGrad6", logo_lnum, o + 13, o + 15)
+    if nlogo == 1 then
+      hl("DashGrad1", logo_lnum, o + 0,  o + 2)
+      hl("DashGrad2", logo_lnum, o + 4,  o + 5)
+      hl("DashGrad3", logo_lnum, o + 6,  o + 7)
+      hl("DashGrad4", logo_lnum, o + 8,  o + 9)
+      hl("DashGrad5", logo_lnum, o + 10, o + 11)
+      hl("DashGrad6", logo_lnum, o + 13, o + 15)
+    else
+      local gi = math.max(1, math.min(#GRAD, math.ceil(li * #GRAD / nlogo)))
+      hl(GRAD[gi], logo_lnum, o, o + #line)
+    end
   end
 
-  emit("")  -- gap between logo and grid
-  emit("")
+  for _ = 1, logo_gap do emit("") end
 
   -- ── content grid ─────────────────────────────────────────────────
   for i = 1, n do
