@@ -328,13 +328,12 @@ function M.open()
   vim.wo.cursorline     = false
   vim.wo.wrap           = false
 
-  local bmap = function(k)
-    vim.keymap.set("n", k, "<nop>", { buffer = buf, silent = true, nowait = true })
-  end
   -- close
   vim.keymap.set("n", "q", "<cmd>bdelete!<CR>",
     { buffer = buf, silent = true, nowait = true })
-  -- block all scrolling / cursor movement so the buffer stays locked
+
+  -- block keyboard scroll / motion keys
+  local nop = { buffer = buf, silent = true, nowait = true }
   for _, k in ipairs({
     "j", "k", "h", "l", "gg", "G", "H", "M", "L",
     "<Up>", "<Down>", "<Left>", "<Right>",
@@ -342,7 +341,15 @@ function M.open()
     "<PageUp>", "<PageDown>",
     "w", "b", "e", "ge", "W", "B", "E",
     "{", "}", "(", ")", "[[", "]]",
-  }) do bmap(k) end
+  }) do vim.keymap.set("n", k, "<nop>", nop) end
+
+  -- block touchpad / mouse wheel scroll events in all modes
+  for _, k in ipairs({
+    "<ScrollWheelUp>", "<ScrollWheelDown>",
+    "<ScrollWheelLeft>", "<ScrollWheelRight>",
+  }) do
+    vim.keymap.set({ "n", "i", "v" }, k, "<nop>", nop)
+  end
 
   vim.api.nvim_create_autocmd("VimResized", {
     buffer   = buf,
