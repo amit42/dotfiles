@@ -387,6 +387,19 @@ return {
       end,
     },
 
+    -- ── Surround ──────────────────────────────────────────
+    -- Add / change / delete surrounding chars and tags.
+    -- ys{motion}{char}  add:    ysiw"  →  "word"
+    -- cs{old}{new}      change: cs"'   →  'word'
+    -- ds{char}          delete: ds"    →  word
+    {
+      "kylechui/nvim-surround",
+      event  = "VeryLazy",
+      config = function()
+        require("nvim-surround").setup()
+      end,
+    },
+
     -- ── Undotree ──────────────────────────────────────────
     -- Visual undo history — see every branch of your edit history as a tree
     -- Combines with undofile=true (options.lua) for persistent history across sessions
