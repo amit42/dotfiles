@@ -132,6 +132,10 @@ keymap("t", "<C-l>", "<C-\\><C-N><C-w>l", term_opts)
 -- Lazy lua
 keymap("n", "<leader>l", ":Lazy<CR>", opts)
 
+-- Dashboard — open from anywhere
+keymap("n", "<leader>d", function() require("user.dashboard").open() end,
+  vim.tbl_extend("force", opts, { desc = "Open dashboard" }))
+
 -- WSL: gx opens URLs via Windows cmd.exe instead of xdg-open (which times out in WSL)
 if vim.fn.has("wsl") == 1 then
   vim.ui.open = function(path)

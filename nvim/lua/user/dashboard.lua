@@ -328,8 +328,21 @@ function M.open()
   vim.wo.cursorline     = false
   vim.wo.wrap           = false
 
+  local bmap = function(k)
+    vim.keymap.set("n", k, "<nop>", { buffer = buf, silent = true, nowait = true })
+  end
+  -- close
   vim.keymap.set("n", "q", "<cmd>bdelete!<CR>",
     { buffer = buf, silent = true, nowait = true })
+  -- block all scrolling / cursor movement so the buffer stays locked
+  for _, k in ipairs({
+    "j", "k", "h", "l", "gg", "G", "H", "M", "L",
+    "<Up>", "<Down>", "<Left>", "<Right>",
+    "<C-d>", "<C-u>", "<C-f>", "<C-b>", "<C-e>", "<C-y>",
+    "<PageUp>", "<PageDown>",
+    "w", "b", "e", "ge", "W", "B", "E",
+    "{", "}", "(", ")", "[[", "]]",
+  }) do bmap(k) end
 
   vim.api.nvim_create_autocmd("VimResized", {
     buffer   = buf,

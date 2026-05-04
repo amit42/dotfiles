@@ -325,6 +325,7 @@ return {
         -- Register keymap groups
         -- So which-key shows group names not just keys
         require("which-key").add({
+          { "<leader>d",  desc = "Open dashboard" },
           { "<leader>u",  desc = "Undo tree" },
           { "<leader>s",  group = "Spectre" },
           { "<leader>sr", desc = "Project search/replace" },
