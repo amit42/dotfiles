@@ -4,8 +4,7 @@
 local M = {}
 
 -- ── Content ──────────────────────────────────────────────────────────
--- Columns 1-3: pure nvim keymaps
--- Columns 4-6: pure shell aliases / terminal tools
+-- C1-C3: nvim keymaps   C4-C5: shell / terminal
 
 local C1 = {
   { "Telescope" },
@@ -26,6 +25,11 @@ local C1 = {
   { "C-q",       "Quickfix list"    },
   { "Esc",       "Close picker"     },
   { "Enter",     "Open result"      },
+  { "Navigate" },
+  { "S-l / S-h", "Cycle buffers"    },
+  { "SPC x",     "Close buffer"     },
+  { "C-d / C-u", "Scroll centred"   },
+  { "C-h/j/k/l", "Split nav"        },
 }
 
 local C2 = {
@@ -45,11 +49,6 @@ local C2 = {
   { "SPC lt",    "Workspace trouble" },
   { "SPC ts",    "Symbols picker"   },
   { "SPC td",    "Diagnostics pick" },
-  { "Vim" },
-  { ".",         "Repeat action"    },
-  { "q<r> / @<r>","Record / play"   },
-  { "ci / ca",   "Change in/around" },
-  { "di / da",   "Delete in/around" },
   { "Tools" },
   { "SPC n",     "File tree"        },
   { "SPC S",     "Restore session"  },
@@ -63,18 +62,11 @@ local C2 = {
 }
 
 local C3 = {
-  { "Navigate" },
-  { "S-l / S-h", "Cycle buffers"    },
-  { "SPC x",     "Close buffer"     },
-  { "C-d / C-u", "Scroll centred"   },
-  { "C-h/j/k/l", "Split nav"        },
-  { "Git" },
-  { "SPC gs",    "Git status"       },
-  { "SPC gd",    "Git diff"         },
-  { "SPC gb",    "Toggle blame"     },
-  { "]h / [h",   "Next/prev hunk"   },
-  { "SPC hs",    "Stage hunk"       },
-  { "SPC hr",    "Reset hunk"       },
+  { "Vim" },
+  { ".",         "Repeat action"    },
+  { "q<r> / @<r>","Record / play"   },
+  { "ci / ca",   "Change in/around" },
+  { "di / da",   "Delete in/around" },
   { "Edit" },
   { "gcc / gc",  "Comment ln / sel" },
   { "A-j / A-k", "Move line"        },
@@ -89,6 +81,13 @@ local C3 = {
   { "Completion" },
   { "C-j / C-k", "Next/prev item"   },
   { "Enter",     "Confirm item"     },
+  { "Git" },
+  { "SPC gs",    "Git status"       },
+  { "SPC gd",    "Git diff"         },
+  { "SPC gb",    "Toggle blame"     },
+  { "]h / [h",   "Next/prev hunk"   },
+  { "SPC hs",    "Stage hunk"       },
+  { "SPC hr",    "Reset hunk"       },
 }
 
 local C4 = {
@@ -97,11 +96,14 @@ local C4 = {
   { "gs / gd",   "status / diff"    },
   { "ga / gaa",  "add / add -A"     },
   { "gc / gca",  "commit / amend"   },
+  { "gcam",      "commit all+msg"   },
   { "gp / gpf",  "push / force"     },
   { "gl",        "pull"             },
   { "gco / gcb", "checkout / -b"    },
   { "glog",      "branch graph"     },
   { "gst / gstp","stash / pop"      },
+  { "gsync",     "rebase onto main" },
+  { "gpr",       "push + open PR"   },
   { "gundo",     "undo last commit" },
   { "groot",     "cd repo root"     },
   { "gnuke",     "! discard all"    },
@@ -110,7 +112,7 @@ local C4 = {
   { "...",       "Up two levels"    },
   { "-",         "Previous dir"     },
   { "up N",      "Go up N levels"   },
-  { "dot",       "cd dotfiles"      },
+  { "dot / dotup","dotfiles cd/sync"},
   { "mkcd",      "mkdir + cd"       },
   { "scratch",   "Open scratchpad"  },
   { "Misc" },
@@ -126,55 +128,33 @@ local C5 = {
   { "dex",       "exec -it"         },
   { "dlog",      "logs -f"          },
   { "dsh / dbash","sh / bash shell" },
-  { "dip",       "container IP"     },
-  { "dimg",      "list images"      },
+  { "dimg / dip","images / IP"      },
   { "dstop",     "stop all running" },
   { "dclean",    "prune imgs+ctrs"  },
   { "Compose" },
   { "dc",        "docker compose"   },
   { "dcu / dcd", "up / down"        },
   { "dcud",      "up -d detached"   },
-  { "dcl",       "logs -f (all)"    },
-  { "dcb",       "build images"     },
+  { "dcl / dcb", "logs / build"     },
   { "kubectl" },
   { "k / kgp",   "kubectl / pods"   },
   { "kgpa",      "pods all ns"      },
   { "kgs / kgn", "services / nodes" },
-  { "kgd / kgda","deployments"      },
-  { "kgcm",      "get configmaps"   },
-  { "kgsec",     "get secrets"      },
-  { "kd / kdp",  "describe / pod"   },
-  { "Network" },
-  { "myip",      "Public IP"        },
-  { "localip",   "LAN IP (en0)"     },
-  { "ports",     "TCP listen ports" },
-}
-
-local C6 = {
+  { "kaf / kdf", "apply / delete"   },
+  { "kex / kpf", "exec / fwd port"  },
+  { "kk",        "k9s TUI"          },
   { "Tmux (Pfx=C-Spc)" },
   { "M-h / M-l",  "Prev/next win"    },
   { "Pfx+|/-",    "Vert/horiz split" },
   { "Pfx+h/j/k/l","Navigate panes"   },
-  { "Pfx+H/J/K/L","Resize panes"     },
   { "Pfx+c / ,",  "New / rename win" },
   { "Pfx+x/X",    "Kill pane/win"    },
-  { "Pfx+r",      "Reload config"    },
-  { "Pfx+I",      "Install plugins"  },
   { "Pfx+Ctrl+s", "Save session"     },
   { "Pfx+Ctrl+r", "Restore session"  },
-  { "Pfx+Enter",  "Enter copy mode"  },
-  { "v / y",      "Select / copy"    },
-  { "Pfx+p",      "Paste"            },
-  { "Splits" },
-  { "C-Up/Dn",    "Resize height"    },
-  { "C-Lt/Rt",    "Resize width"     },
   { "Shell" },
-  { "ts",         "New tmux session" },
-  { "tls",        "List sessions"    },
-  { "tq / tkill", "Detach / kill"    },
-  { "tn",         "New named session" },
-  { "vf",         "nvim fuzzy find"  },
-  { "rgf",        "rg fuzzy find"    },
+  { "ts / tn",    "New session"      },
+  { "tls / tq",   "List / detach"    },
+  { "vf / rgf",   "nvim/rg fuzzy"    },
   { "weather",    "wttr.in forecast" },
   { "fkill",      "fuzzy kill proc"  },
 }
@@ -190,9 +170,9 @@ local LOGO = {
 local KEY_W   = 12
 local DESC_W  = 18
 local COL_W   = KEY_W + 2 + DESC_W        -- 32 display cells
-local NCOLS   = 6
+local NCOLS   = 5
 local GAP     = 3                          -- display cells between columns
-local BLOCK_W = COL_W * NCOLS + GAP * (NCOLS - 1)  -- 207
+local BLOCK_W = COL_W * NCOLS + GAP * (NCOLS - 1)  -- 172
 
 -- Column separator " │ " — 3 display cells, 5 bytes (│ = U+2502, 3 bytes)
 local DIV   = " \xe2\x94\x82 "
@@ -250,7 +230,7 @@ function M.build()
   local logo_dw  = vim.fn.strdisplaywidth(LOGO[1])
   local logo_pad = math.max(0, math.floor((BLOCK_W - logo_dw) / 2))
 
-  local cols = { C1, C2, C3, C4, C5, C6 }
+  local cols = { C1, C2, C3, C4, C5 }
   local n    = 0
   for _, c in ipairs(cols) do n = math.max(n, #c) end
 
