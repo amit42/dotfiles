@@ -53,8 +53,13 @@ local C2 = {
   { "Tools" },
   { "SPC n",     "File tree"        },
   { "SPC S",     "Restore session"  },
+  { "SPC u",     "Undo tree"        },
   { "SPC m / l", "Mason / Lazy"     },
   { "C-\\",      "Terminal toggle"  },
+  { "Spectre" },
+  { "SPC sr",    "Project replace"  },
+  { "SPC sw",    "Search word"      },
+  { "SPC sf",    "File replace"     },
 }
 
 local C3 = {

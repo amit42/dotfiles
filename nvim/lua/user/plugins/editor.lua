@@ -326,6 +326,10 @@ return {
         -- So which-key shows group names not just keys
         require("which-key").add({
           { "<leader>u",  desc = "Undo tree" },
+          { "<leader>s",  group = "Spectre" },
+          { "<leader>sr", desc = "Project search/replace" },
+          { "<leader>sw", desc = "Search word under cursor" },
+          { "<leader>sf", desc = "Search in current file" },
           { "<leader>e",  desc = "File browser (telescope)" },
           { "<leader>n",  desc = "Toggle file tree" },
           { "<leader>w",  desc = "Save" },
@@ -513,6 +517,37 @@ return {
           direction = "float",           -- float, horizontal, vertical, tab
           float_opts = {
             border = "curved",
+          },
+        })
+      end,
+    },
+
+    -- ── Spectre ───────────────────────────────────────────────
+    -- Project-wide find + replace with regex, live preview, and
+    -- per-file confirmation before writing.
+    -- <leader>sr  open Spectre (search whole project)
+    -- <leader>sw  search for word under cursor across project
+    -- <leader>sf  search + replace in current file only
+    -- Inside Spectre:
+    --   <leader>r  replace all matches
+    --   <leader>rc replace match under cursor
+    --   dd         exclude a match from the replacement
+    --   Tab        toggle between search and replace fields
+    {
+      "nvim-pack/nvim-spectre",
+      dependencies = { "nvim-lua/plenary.nvim" },
+      cmd  = "Spectre",
+      keys = {
+        { "<leader>sr", function() require("spectre").toggle() end,                              desc = "Spectre: project search/replace" },
+        { "<leader>sw", function() require("spectre").open_visual({ select_word = true }) end,   desc = "Spectre: search word under cursor", mode = { "n", "v" } },
+        { "<leader>sf", function() require("spectre").open_file_search() end,                    desc = "Spectre: search in current file" },
+      },
+      config = function()
+        require("spectre").setup({
+          replace_vim_cmd = "cdo",
+          highlight = {
+            search  = "DiffChange",
+            replace = "DiffDelete",
           },
         })
       end,
