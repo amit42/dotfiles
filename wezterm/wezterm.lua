@@ -55,9 +55,18 @@ config.window_padding = {
 -- Hide the title bar — cleaner look, use native macOS borders only
 config.window_decorations = "RESIZE"
 
--- Start size — dashboard is 172 cells wide + 35 rows tall; this gives headroom
+-- Start size — used briefly before the maximize handler kicks in (below).
+-- Sized to fit the dashboard so there's no flicker on launch.
 config.initial_cols = 220
 config.initial_rows = 55
+
+-- Maximize on launch. WezTerm has no boolean for this; the documented
+-- approach is a gui-startup event that spawns the window then maximizes
+-- it via the gui handle. Use window:toggle_fullscreen() for true fullscreen.
+wezterm.on("gui-startup", function(cmd)
+  local _, _, window = wezterm.mux.spawn_window(cmd or {})
+  window:gui_window():maximize()
+end)
 
 -- Tab bar
 config.enable_tab_bar = true
