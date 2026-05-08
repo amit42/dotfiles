@@ -73,7 +73,6 @@ local function augroup(name)
     callback = function()
       vim.opt_local.tabstop    = 4
       vim.opt_local.shiftwidth = 4
-      vim.opt_local.colorcolumn = "80"  -- strict 80 char limit for embedded
     end,
   })
   
@@ -95,7 +94,6 @@ local function augroup(name)
     callback = function()
       vim.opt_local.tabstop    = 4
       vim.opt_local.shiftwidth = 4
-      vim.opt_local.colorcolumn = "79"  -- PEP8 line length
     end,
   })
   
