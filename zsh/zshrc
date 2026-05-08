@@ -1774,7 +1774,13 @@ ts() {
     cmd+=" \; new-window -n 'terminal' -c '$PWD'"
     cmd+=" \; new-window -n 'logs' -c '$PWD'"
     [[ "$is_wsl" == true ]] && cmd+=" \; new-window -n 'cmd' -c '$PWD' 'cmd.exe'"
-    cmd+=" \; new-window -n 'agent' -c '$PWD' \"zsh -ic 'claude --name $name; exec zsh'\""
+    # --dangerously-skip-permissions:
+    #   • bypasses the per-folder "Do you trust this folder?" dialog
+    #   • auto-allows Read/Edit/Bash on cwd without prompting
+    # Safe here because ts() only spawns sessions in dirs you opened
+    # yourself (your own projects). Drop this flag for one-off launches
+    # in untrusted dirs.
+    cmd+=" \; new-window -n 'agent' -c '$PWD' \"zsh -ic 'claude --dangerously-skip-permissions; exec zsh'\""
     cmd+=" \; select-window -t '$name:1'"
     cmd+=" \; attach-session -t '$name'"
     eval "$cmd"
