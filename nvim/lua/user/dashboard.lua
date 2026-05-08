@@ -332,24 +332,33 @@ function M.open()
   vim.keymap.set("n", "q", "<cmd>bdelete!<CR>",
     { buffer = buf, silent = true, nowait = true })
 
-  -- block keyboard scroll / motion keys
-  local nop = { buffer = buf, silent = true, nowait = true }
-  for _, k in ipairs({
-    "j", "k", "h", "l", "gg", "G", "H", "M", "L",
-    "<Up>", "<Down>", "<Left>", "<Right>",
-    "<C-d>", "<C-u>", "<C-f>", "<C-b>", "<C-e>", "<C-y>",
-    "<PageUp>", "<PageDown>",
-    "w", "b", "e", "ge", "W", "B", "E",
-    "{", "}", "(", ")", "[[", "]]",
-  }) do vim.keymap.set("n", k, "<nop>", nop) end
+  -- Complete cursor lock: snap back to (1,0) on ANY movement. This catches
+  -- every motion (j/k/f/t/*/n/N/%/0/$/^/;/, etc) without needing to enumerate
+  -- them — including motions added by future plugins. Cursorline is already
+  -- off so the snap is invisible.
+  vim.api.nvim_create_autocmd({ "CursorMoved", "CursorMovedI" }, {
+    buffer = buf,
+    callback = function()
+      pcall(vim.api.nvim_win_set_cursor, 0, { 1, 0 })
+    end,
+  })
 
-  -- block touchpad / mouse wheel scroll events in all modes
+  -- Block touchpad / mouse wheel scroll events (these scroll the viewport
+  -- without firing CursorMoved, so they need separate handling).
+  local nop = { buffer = buf, silent = true, nowait = true }
   for _, k in ipairs({
     "<ScrollWheelUp>", "<ScrollWheelDown>",
     "<ScrollWheelLeft>", "<ScrollWheelRight>",
   }) do
     vim.keymap.set({ "n", "i", "v" }, k, "<nop>", nop)
   end
+
+  -- Block all entry into insert/visual modes — buffer is nomodifiable but
+  -- pressing i/a/o still flashes "E21: Cannot make changes" in the cmdline.
+  for _, k in ipairs({
+    "i", "I", "a", "A", "o", "O", "s", "S",
+    "c", "C", "r", "R", "v", "V", "<C-v>",
+  }) do vim.keymap.set("n", k, "<nop>", nop) end
 
   vim.api.nvim_create_autocmd("VimResized", {
     buffer   = buf,

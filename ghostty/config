@@ -55,7 +55,9 @@ macos-option-as-alt = left
 
 # ── Misc ─────────────────────────────────────────────────
 bell-features = no-audio,no-system
-confirm-close-surface = false
+# Prompt before closing — protects against fat-finger Cmd+W when a long
+# command, tmux session, or unsaved nvim buffer is running.
+confirm-close-surface = true
 
 # ── Keybindings ──────────────────────────────────────────
 # Match wezterm: Ctrl+Shift+T new tab, Ctrl+Shift+W close tab,

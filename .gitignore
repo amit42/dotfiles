@@ -1,2 +1,3 @@
 legacy_nvim
 *.DS_Store
+changes.patch
