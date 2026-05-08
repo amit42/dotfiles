@@ -19,7 +19,7 @@ font-feature = -liga
 
 # ── Theme — Catppuccin Mocha ─────────────────────────────
 # Same palette as nvim + tmux + starship + wezterm.
-theme = catppuccin-mocha
+theme = Catppuccin Mocha
 
 # ── Window ───────────────────────────────────────────────
 background-opacity = 0.95
