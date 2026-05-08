@@ -54,7 +54,7 @@ command = /bin/zsh -l
 macos-option-as-alt = left
 
 # ── Misc ─────────────────────────────────────────────────
-audible-bell = false
+bell-features = no-audio,no-system
 confirm-close-surface = false
 
 # ── Keybindings ──────────────────────────────────────────
