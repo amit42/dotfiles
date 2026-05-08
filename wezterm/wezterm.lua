@@ -20,8 +20,13 @@ local config = wezterm.config_builder()
 -- FONT
 -- ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 config.font = wezterm.font("JetBrainsMono Nerd Font", { weight = "Regular" })
-config.font_size = 14.0
-config.line_height = 1.2
+config.font_size = 13.0
+config.line_height = 1.0       -- tight rows so the 35-row dashboard fits
+config.cell_width  = 1.0       -- exact monospace width — prevents column drift
+
+-- Disable ligatures. The dashboard relies on byte-accurate cell widths for
+-- gradient highlights and column dividers; ligatures shift those widths.
+config.harfbuzz_features = { "calt=0", "clig=0", "liga=0" }
 
 -- Fallback fonts for symbols not covered by JetBrainsMono
 config.font_rules = {
@@ -44,15 +49,15 @@ config.window_background_opacity = 0.95      -- slight transparency
 config.macos_window_background_blur = 20     -- frosted glass blur (macOS only)
 
 config.window_padding = {
-  left = 8, right = 8, top = 8, bottom = 4,
+  left = 12, right = 12, top = 8, bottom = 8,
 }
 
 -- Hide the title bar — cleaner look, use native macOS borders only
 config.window_decorations = "RESIZE"
 
--- Start maximized
+-- Start size — dashboard is 172 cells wide + 35 rows tall; this gives headroom
 config.initial_cols = 220
-config.initial_rows = 50
+config.initial_rows = 55
 
 -- Tab bar
 config.enable_tab_bar = true
