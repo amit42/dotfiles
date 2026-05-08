@@ -3,12 +3,65 @@
 # ║  Edit: dotfiles/ghostty/config                       ║
 # ║  Install: bash install.sh                            ║
 # ╚═══════════════════════════════════════════════════════╝
+#
+# Mirrors the WezTerm config visually so both terminals look identical.
+# Full reference: https://ghostty.org/docs/config/reference
 
-# Make left Option key send ESC+key (Meta) so tmux/vim Alt bindings work.
-# e.g. Alt+h/l for window switching, Alt-based nvim mappings.
-# Right Option keeps default macOS behaviour (special characters).
-macos-option-as-alt = left
+# ── Font ─────────────────────────────────────────────────
+font-family = JetBrainsMono Nerd Font
+font-size = 13
+# Disable ligatures — the nvim dashboard relies on byte-precise cell
+# widths for gradient highlights and column dividers; ligatures shift
+# those widths and break alignment.
+font-feature = -calt
+font-feature = -clig
+font-feature = -liga
 
-# Window padding for breathing room
+# ── Theme — Catppuccin Mocha ─────────────────────────────
+# Same palette as nvim + tmux + starship + wezterm.
+theme = catppuccin-mocha
+
+# ── Window ───────────────────────────────────────────────
+background-opacity = 0.95
+background-blur-radius = 20
 window-padding-x = 12
 window-padding-y = 8
+window-padding-balance = true
+# Borderless feel like wezterm window_decorations = "RESIZE"
+window-decoration = true
+# Open maximized on launch (matches wezterm gui-startup → maximize)
+window-save-state = always
+maximize = true
+
+# ── Tab bar ──────────────────────────────────────────────
+# Native macOS tabs styled by the theme.
+macos-titlebar-style = tabs
+
+# ── Cursor ───────────────────────────────────────────────
+cursor-style = bar
+cursor-style-blink = true
+
+# ── Scrollback ───────────────────────────────────────────
+scrollback-limit = 10000
+
+# ── Shell ────────────────────────────────────────────────
+command = /bin/zsh -l
+
+# ── macOS Option key ─────────────────────────────────────
+# Left Option sends ESC+key (Meta) so tmux/vim Alt bindings work
+# (e.g. Alt+h/l for window switching, Alt-based nvim mappings).
+# Right Option keeps default macOS behaviour for special characters.
+macos-option-as-alt = left
+
+# ── Misc ─────────────────────────────────────────────────
+audible-bell = false
+confirm-close-surface = false
+
+# ── Keybindings ──────────────────────────────────────────
+# Match wezterm: Ctrl+Shift+T new tab, Ctrl+Shift+W close tab,
+# Ctrl+Tab cycle, Cmd+R reload config.
+keybind = ctrl+shift+t=new_tab
+keybind = ctrl+shift+w=close_surface
+keybind = ctrl+tab=next_tab
+keybind = ctrl+shift+tab=previous_tab
+keybind = super+r=reload_config
