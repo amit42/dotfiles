@@ -1878,6 +1878,15 @@ if grep -qi microsoft /proc/version 2>/dev/null; then
   alias wdl="cd $WIN_HOME/Downloads"
   alias wdocs="cd $WIN_HOME/Documents"
 
+  # Auto-cd to Windows Desktop on fresh shells. Mirrors the WezTerm and
+  # Ghostty default_cwd on macOS — but on WSL ~/Desktop is /home/$USER/Desktop
+  # which usually doesn't exist, so we redirect to the Windows Desktop instead.
+  # Only triggers when the shell starts in $HOME (default WSL launch dir);
+  # subshells, tmux panes spawned in other dirs, etc. are unaffected.
+  if [[ -o interactive && "$PWD" == "$HOME" && -d "$WIN_HOME/Desktop" ]]; then
+    cd "$WIN_HOME/Desktop"
+  fi
+
   # open — launch a file or directory with its default Windows app.
   # Works like macOS `open`: `open .` launches Explorer, `open file.pdf` opens in Acrobat, etc.
   open() {

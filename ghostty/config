@@ -21,6 +21,11 @@ font-feature = -liga
 # Same palette as nvim + tmux + starship + wezterm.
 theme = Catppuccin Mocha
 
+# ── Startup directory ────────────────────────────────────
+# Open new surfaces in ~/Desktop. On macOS/Linux this resolves correctly.
+# WSL: zshrc detects WSL and re-cds into the Windows Desktop on first shell.
+working-directory = ~/Desktop
+
 # ── Window ───────────────────────────────────────────────
 background-opacity = 0.95
 background-blur-radius = 20

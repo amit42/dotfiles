@@ -60,6 +60,20 @@ config.window_decorations = "RESIZE"
 config.initial_cols = 220
 config.initial_rows = 55
 
+-- Open new windows in Desktop. Cross-platform: on Windows (incl. when
+-- WezTerm runs WSL) we use the Windows Desktop path — wsl.exe accepts
+-- the Windows path and mounts it as /mnt/c/Users/.../Desktop inside WSL.
+local function startup_dir()
+  if wezterm.target_triple:find("windows") then
+    local user = os.getenv("USERNAME")
+    if user and user ~= "" then
+      return "C:\\Users\\" .. user .. "\\Desktop"
+    end
+  end
+  return wezterm.home_dir .. "/Desktop"   -- macOS / Linux
+end
+config.default_cwd = startup_dir()
+
 -- Maximize on launch. WezTerm has no boolean for this; the documented
 -- approach is a gui-startup event that spawns the window then maximizes
 -- it via the gui handle. Use window:toggle_fullscreen() for true fullscreen.
