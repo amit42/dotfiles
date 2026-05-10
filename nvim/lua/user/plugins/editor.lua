@@ -141,12 +141,20 @@ return {
         local builtin = require("telescope.builtin")
 
         local function file_browser()
+          -- Start at the current buffer's directory; fall back to cwd
+          -- if the buffer is unnamed (e.g. dashboard, scratch).
+          local here = vim.fn.expand("%:p:h")
+          if here == "" or vim.bo.filetype == "dashboard" then
+            here = vim.fn.getcwd()
+          end
           require("telescope").extensions.file_browser.file_browser({
-            display_stat = false,
-            git_status   = false,
-            grouped      = true,
-            path_display = { "tail" },
-            previewer    = make_fb_previewer(),
+            display_stat  = false,
+            git_status    = false,
+            grouped       = true,
+            path_display  = { "tail" },
+            previewer     = make_fb_previewer(),
+            path          = here,    -- open at current file's dir
+            select_buffer = true,    -- highlight the current file
           })
         end
 
