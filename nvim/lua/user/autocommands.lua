@@ -194,6 +194,30 @@ local function augroup(name)
     end,
   })
 
+  -- ── Read PDFs as Text ─────────────────────────────────────
+  -- When you :e file.pdf, replace the buffer contents with pdftotext
+  -- output so you can read it like any other file.
+  -- Install (macOS): brew install poppler
+  --         (WSL):   sudo apt install poppler-utils
+  vim.api.nvim_create_autocmd("BufReadPost", {
+    group   = augroup("read_pdf_as_text"),
+    pattern = "*.pdf",
+    callback = function(args)
+      if vim.fn.executable("pdftotext") == 0 then
+        vim.notify("pdftotext not installed — can't read PDF", vim.log.levels.WARN)
+        return
+      end
+      local file = vim.api.nvim_buf_get_name(args.buf)
+      vim.bo[args.buf].modifiable = true
+      vim.cmd("silent %!pdftotext -layout " .. vim.fn.shellescape(file) .. " -")
+      vim.bo[args.buf].modifiable = false
+      vim.bo[args.buf].readonly   = true
+      vim.bo[args.buf].buftype    = "nofile"   -- prevents :w writing garbled text back
+      vim.bo[args.buf].filetype   = "text"
+      vim.api.nvim_win_set_cursor(0, { 1, 0 })
+    end,
+  })
+
   -- ── Restore Line Numbers After Dashboard ─────────────────
   -- Backstop: if any code path leaves number=false on a normal edit window,
   -- BufWinEnter resets it. buftype=="" means a real file, not a plugin panel.

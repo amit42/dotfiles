@@ -1509,6 +1509,25 @@ alias cbpaste='pbpaste'
 #   docker logs api      | ai "why is this crashing?"
 #   git log --since=1.week | ai "summarize this week"
 #   cat err.log          | ai "root cause and fix"
+# pdf — read a PDF in the terminal. Uses tdf (rendered pages with images
+# via Kitty/Sixel graphics) if installed, falls back to pdftotext piped
+# through less for text-only viewing.
+# Install (macOS):  brew install poppler tdf
+# Install (WSL):    sudo apt install poppler-utils && cargo install tdf
+pdf() {
+  [[ -z "$1" ]] && { echo "Usage: pdf <file.pdf>"; return 1; }
+  [[ -f "$1" ]] || { echo "Not found: $1" >&2; return 1; }
+  if command -v tdf &>/dev/null; then
+    tdf "$1"
+  elif command -v pdftotext &>/dev/null; then
+    pdftotext -layout "$1" - | less -R
+  else
+    echo "Install poppler (pdftotext) and/or tdf to read PDFs." >&2
+    return 1
+  fi
+}
+
+
 if command -v claude &>/dev/null; then
   ai()  { claude -p "$*"; }
   # aiy — same as ai, but with --dangerously-skip-permissions so the
