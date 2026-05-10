@@ -43,9 +43,11 @@ cmp.setup({
   },
 
   mapping = cmp.mapping.preset.insert({
-    -- Navigate completion list
-    ["<C-k>"] = cmp.mapping.select_prev_item(),
+    -- Navigate the dropdown (the "selection" keys)
     ["<C-j>"] = cmp.mapping.select_next_item(),
+    ["<C-k>"] = cmp.mapping.select_prev_item(),
+    ["<Down>"] = cmp.mapping.select_next_item(),
+    ["<Up>"]   = cmp.mapping.select_prev_item(),
 
     -- Scroll inside the documentation panel
     ["<C-b>"] = cmp.mapping.scroll_docs(-4),
@@ -57,13 +59,16 @@ cmp.setup({
     -- Dismiss the menu without confirming
     ["<C-e>"] = cmp.mapping.abort(),
 
-    -- Confirm selected completion; plain newline if nothing is selected
+    -- Enter: confirm only if a row is explicitly selected; otherwise newline.
+    -- Keeps Enter safe — accidental Enter while menu is open won't insert
+    -- the wrong word.
     ["<CR>"] = cmp.mapping.confirm({ select = false }),
 
-    -- Tab: move through completion list or jump through snippet placeholders
+    -- Tab: ACCEPT the suggestion. If nothing is selected yet, auto-pick the
+    -- first item (select=true). Otherwise jump through snippet placeholders.
     ["<Tab>"] = cmp.mapping(function(fallback)
       if cmp.visible() then
-        cmp.select_next_item()
+        cmp.confirm({ select = true })
       elseif luasnip.expand_or_jumpable() then
         luasnip.expand_or_jump()
       else
@@ -71,10 +76,10 @@ cmp.setup({
       end
     end, { "i", "s" }),
 
+    -- Shift-Tab: jump back through snippet placeholders (no menu cycling
+    -- here — use C-k/Up for that).
     ["<S-Tab>"] = cmp.mapping(function(fallback)
-      if cmp.visible() then
-        cmp.select_prev_item()
-      elseif luasnip.jumpable(-1) then
+      if luasnip.jumpable(-1) then
         luasnip.jump(-1)
       else
         fallback()
