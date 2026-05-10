@@ -1510,7 +1510,11 @@ alias cbpaste='pbpaste'
 #   git log --since=1.week | ai "summarize this week"
 #   cat err.log          | ai "root cause and fix"
 if command -v claude &>/dev/null; then
-  ai() { claude -p "$*"; }
+  ai()  { claude -p "$*"; }
+  # aiy — same as ai, but with --dangerously-skip-permissions so the
+  # one-shot can read/write files and run commands without prompting.
+  # Use only in dirs you trust (your own projects).
+  aiy() { claude -p "$*" --dangerously-skip-permissions; }
 fi
 
 
