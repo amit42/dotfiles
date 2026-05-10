@@ -1500,6 +1500,21 @@ alias cbpaste='pbpaste'
 
 
 # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+# CLAUDE CODE
+# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+# ai — headless one-shot Claude Code call. Accepts args and/or stdin.
+# The arg is the instruction; piped stdin (if any) is the data.
+# Usage:
+#   ai "explain async/await in javascript"
+#   docker logs api      | ai "why is this crashing?"
+#   git log --since=1.week | ai "summarize this week"
+#   cat err.log          | ai "root cause and fix"
+if command -v claude &>/dev/null; then
+  ai() { claude -p "$*"; }
+fi
+
+
+# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 # HOMEBREW
 # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 # All aliases are guarded — if brew isn't installed they're not set.
