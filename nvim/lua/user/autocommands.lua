@@ -153,6 +153,19 @@ local function augroup(name)
     end,
   })
 
+  -- Hide trailing slash on directory entries in telescope file browser.
+  -- The file browser appends "/" to folder names; the folder icon already
+  -- signals "directory", so the slash is visual noise.
+  vim.api.nvim_create_autocmd("FileType", {
+    group = augroup("telescope_no_dir_slash"),
+    pattern = "TelescopeResults",
+    callback = function()
+      vim.opt_local.conceallevel  = 2
+      vim.opt_local.concealcursor = "nvc"
+      vim.fn.matchadd("Conceal", "/\\ze\\s*$")
+    end,
+  })
+
   -- ── Show Dashboard on Startup ─────────────────────────────
   -- Handles: nvim (empty), nvim . (directory), nvim-tree restored by resurrect.
   -- Deferred 100ms so all plugins (dashboard, nvim-tree) are fully loaded.

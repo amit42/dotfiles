@@ -46,7 +46,7 @@ local C2 = {
   { "SPC lj",    "Next diagnostic"  },
   { "SPC lk",    "Prev diagnostic"  },
   { "SPC lq",    "Buffer trouble"   },
-  { "SPC lt",    "Workspace trouble" },
+  { "SPC lt",    "Workspace diags"  },
   { "SPC ts",    "Symbols picker"   },
   { "SPC td",    "Diagnostics pick" },
   { "Tools" },
@@ -75,9 +75,9 @@ local C3 = {
   { "< / >",     "Indent / dedent"  },
   { "Text Objects" },
   { "af / if",   "Func outer/inner" },
-  { "ac / ic",   "Class outer/inner" },
+  { "ac / ic",   "Class out/inner"  },
   { "aa / ia",   "Arg outer/inner"  },
-  { "ab / ib",   "Block outer/inner" },
+  { "ab / ib",   "Block out/inner"  },
   { "Completion" },
   { "C-j / C-k", "Next/prev item"   },
   { "Tab",       "Accept (auto-1st)"},
@@ -168,16 +168,16 @@ local LOGO = {
 
 -- ── Geometry ─────────────────────────────────────────────────────────
 
-local KEY_W   = 12
-local DESC_W  = 18
-local COL_W   = KEY_W + 2 + DESC_W        -- 32 display cells
+local KEY_W   = 9
+local DESC_W  = 12
+local COL_W   = KEY_W + 2 + DESC_W        -- 23 display cells
 local NCOLS   = 5
-local GAP     = 3                          -- display cells between columns
-local BLOCK_W = COL_W * NCOLS + GAP * (NCOLS - 1)  -- 172
+local GAP     = 1                          -- display cells between columns
+local BLOCK_W = COL_W * NCOLS + GAP * (NCOLS - 1)  -- 119
 
--- Column separator " │ " — 3 display cells, 5 bytes (│ = U+2502, 3 bytes)
-local DIV   = " \xe2\x94\x82 "
-local DIV_B = #DIV  -- 5
+-- Column separator "│" — 1 display cell, 3 bytes (U+2502)
+local DIV   = "\xe2\x94\x82"
+local DIV_B = #DIV  -- 3
 
 -- ── Colours (catppuccin-mocha) ────────────────────────────────────────
 
@@ -202,7 +202,9 @@ local function fmt(entry)
     local dw = vim.fn.strdisplaywidth(entry[1])
     return entry[1] .. string.rep(" ", math.max(0, COL_W - dw))
   end
-  return string.format("%-" .. KEY_W .. "s  %-" .. DESC_W .. "s", entry[1], entry[2])
+  local key  = string.sub(entry[1], 1, KEY_W)
+  local desc = string.sub(entry[2], 1, DESC_W)
+  return string.format("%-" .. KEY_W .. "s  %-" .. DESC_W .. "s", key, desc)
 end
 
 -- ── Build ─────────────────────────────────────────────────────────────
@@ -273,7 +275,7 @@ function M.build()
         if #entry == 1 then
           row_hls[#row_hls+1] = { "DashSection", cur, cur + #entry[1] }
         else
-          row_hls[#row_hls+1] = { "DashKey", cur, cur + #entry[1] }
+          row_hls[#row_hls+1] = { "DashKey", cur, cur + math.min(#entry[1], KEY_W) }
         end
       end
 
@@ -282,7 +284,7 @@ function M.build()
 
       if ci < NCOLS then
         table.insert(parts, DIV)
-        row_hls[#row_hls+1] = { "DashColDiv", cur + 1, cur + 4 }
+        row_hls[#row_hls+1] = { "DashColDiv", cur, cur + 3 }
         cur = cur + DIV_B
       end
     end
@@ -332,34 +334,6 @@ function M.open()
   -- close
   vim.keymap.set("n", "q", "<cmd>bdelete!<CR>",
     { buffer = buf, silent = true, nowait = true })
-
-  -- Complete cursor lock: snap back to (1,0) on ANY movement. This catches
-  -- every motion (j/k/f/t/*/n/N/%/0/$/^/;/, etc) without needing to enumerate
-  -- them — including motions added by future plugins. Cursorline is already
-  -- off so the snap is invisible.
-  vim.api.nvim_create_autocmd({ "CursorMoved", "CursorMovedI" }, {
-    buffer = buf,
-    callback = function()
-      pcall(vim.api.nvim_win_set_cursor, 0, { 1, 0 })
-    end,
-  })
-
-  -- Block touchpad / mouse wheel scroll events (these scroll the viewport
-  -- without firing CursorMoved, so they need separate handling).
-  local nop = { buffer = buf, silent = true, nowait = true }
-  for _, k in ipairs({
-    "<ScrollWheelUp>", "<ScrollWheelDown>",
-    "<ScrollWheelLeft>", "<ScrollWheelRight>",
-  }) do
-    vim.keymap.set({ "n", "i", "v" }, k, "<nop>", nop)
-  end
-
-  -- Block all entry into insert/visual modes — buffer is nomodifiable but
-  -- pressing i/a/o still flashes "E21: Cannot make changes" in the cmdline.
-  for _, k in ipairs({
-    "i", "I", "a", "A", "o", "O", "s", "S",
-    "c", "C", "r", "R", "v", "V", "<C-v>",
-  }) do vim.keymap.set("n", k, "<nop>", nop) end
 
   vim.api.nvim_create_autocmd("VimResized", {
     buffer   = buf,
