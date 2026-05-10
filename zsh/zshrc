@@ -1517,8 +1517,10 @@ if command -v claude &>/dev/null; then
   aiy() { claude -p "$*" --dangerously-skip-permissions; }
 
   # aime — ask Claude about YOUR setup (keymaps, aliases, nvim/tmux/zsh
-  # configs, KEYMAPS.md, etc). Runs Claude inside the dotfiles dir in a
-  # subshell so cwd is preserved, with permissions skipped (it's your repo).
+  # configs, KEYMAPS.md, etc).
+  #   • Read-only: only Read/Glob/Grep allowed — no edits, no shell exec
+  #   • Persistent session: same session ID reused across calls so Claude
+  #     doesn't re-explore the repo every time. Reset with `aime-reset`.
   # Examples:
   #   aime "what's the keymap for spectre"
   #   aime "what does gsync do"
@@ -1526,8 +1528,17 @@ if command -v claude &>/dev/null; then
   aime() {
     local d="$HOME/Desktop/dotfiles/dotfiles"
     [[ -d "$d" ]] || { echo "Dotfiles not found at $d" >&2; return 1; }
-    ( cd "$d" && claude -p "About my dotfiles in this directory: $*" \
-        --dangerously-skip-permissions )
+    local sid_file="$HOME/.cache/aime-session"
+    mkdir -p "$(dirname "$sid_file")"
+    [[ -s "$sid_file" ]] || uuidgen | tr 'A-Z' 'a-z' > "$sid_file"
+    ( cd "$d" && claude -p "$*" \
+        --session-id "$(cat "$sid_file")" \
+        --allowedTools "Read,Glob,Grep" )
+  }
+
+  # aime-reset — start aime's session over (forgets prior conversation).
+  aime-reset() {
+    rm -f "$HOME/.cache/aime-session" && echo "aime session reset."
   }
 fi
 
