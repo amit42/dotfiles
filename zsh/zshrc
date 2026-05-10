@@ -1530,9 +1530,20 @@ if command -v claude &>/dev/null; then
     [[ -d "$d" ]] || { echo "Dotfiles not found at $d" >&2; return 1; }
     local sid_file="$HOME/.cache/aime-session"
     mkdir -p "$(dirname "$sid_file")"
-    [[ -s "$sid_file" ]] || uuidgen | tr 'A-Z' 'a-z' > "$sid_file"
-    ( cd "$d" && claude -p "$*" \
-        --session-id "$(cat "$sid_file")" \
+
+    # First call: create the session with a fixed UUID via --session-id.
+    # Subsequent calls: resume that session via --resume (reusing
+    # --session-id errors with "already in use").
+    local sid id_flag
+    if [[ -s "$sid_file" ]]; then
+      sid=$(cat "$sid_file"); id_flag="--resume"
+    else
+      sid=$(uuidgen | tr 'A-Z' 'a-z')
+      echo "$sid" > "$sid_file"
+      id_flag="--session-id"
+    fi
+
+    ( cd "$d" && claude -p "$*" "$id_flag" "$sid" \
         --allowedTools "Read,Glob,Grep" )
   }
 
