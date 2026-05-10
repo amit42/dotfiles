@@ -1515,6 +1515,20 @@ if command -v claude &>/dev/null; then
   # one-shot can read/write files and run commands without prompting.
   # Use only in dirs you trust (your own projects).
   aiy() { claude -p "$*" --dangerously-skip-permissions; }
+
+  # aime — ask Claude about YOUR setup (keymaps, aliases, nvim/tmux/zsh
+  # configs, KEYMAPS.md, etc). Runs Claude inside the dotfiles dir in a
+  # subshell so cwd is preserved, with permissions skipped (it's your repo).
+  # Examples:
+  #   aime "what's the keymap for spectre"
+  #   aime "what does gsync do"
+  #   aime "how is my tmux status bar configured"
+  aime() {
+    local d="$HOME/Desktop/dotfiles/dotfiles"
+    [[ -d "$d" ]] || { echo "Dotfiles not found at $d" >&2; return 1; }
+    ( cd "$d" && claude -p "About my dotfiles in this directory: $*" \
+        --dangerously-skip-permissions )
+  }
 fi
 
 
