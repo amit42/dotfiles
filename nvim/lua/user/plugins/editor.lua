@@ -588,12 +588,28 @@ return {
         heading = { enabled = true },
         -- Code blocks get a background highlight and the language label
         code = { enabled = true, style = "full" },
-        -- Render - [ ] and - [x] as unicode checkboxes
-        checkbox = { enabled = true },
         -- Tables rendered with proper border characters
         pipe_table = { enabled = true },
         -- Bullet list markers replaced with unicode symbols
         bullet = { enabled = true },
+        -- Checkboxes: default [ ] / [x], plus custom states for richer todo
+        -- tracking. Requires conceallevel=2 (set per-FT in autocommands.lua)
+        -- so the raw "[ ]" markup is hidden and only the glyph is shown.
+        checkbox = {
+          enabled = true,
+          position  = "inline",
+          unchecked = { icon = "󰄱 ", highlight = "RenderMarkdownUnchecked" },
+          checked   = { icon = "󰱒 ", highlight = "RenderMarkdownChecked",   scope_highlight = "@markup.strikethrough" },
+          custom = {
+            todo        = { raw = "[ ]", rendered = "󰄱 ", highlight = "RenderMarkdownUnchecked" },
+            doing       = { raw = "[/]", rendered = "󰪞 ", highlight = "DiagnosticWarn"          },
+            done        = { raw = "[x]", rendered = "󰱒 ", highlight = "RenderMarkdownChecked", scope_highlight = "@markup.strikethrough" },
+            cancelled   = { raw = "[-]", rendered = "󰅖 ", highlight = "Comment",               scope_highlight = "@markup.strikethrough" },
+            important   = { raw = "[!]", rendered = "󰀦 ", highlight = "DiagnosticError"        },
+            question    = { raw = "[?]", rendered = "󰘥 ", highlight = "DiagnosticInfo"         },
+            star        = { raw = "[*]", rendered = "󰓎 ", highlight = "DiagnosticWarn"         },
+          },
+        },
       },
     },
 

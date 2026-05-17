@@ -115,6 +115,10 @@ local function augroup(name)
       vim.opt_local.wrap     = true
       vim.opt_local.spell    = true   -- spell check in markdown
       vim.opt_local.linebreak = true
+      -- conceallevel=2 lets render-markdown.nvim hide raw `[ ]` / `[x]`
+      -- markup and show its rendered checkbox glyphs instead. Global
+      -- default is 0 (set in options.lua) for non-markdown files.
+      vim.opt_local.conceallevel = 2
     end,
   })
   
