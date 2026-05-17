@@ -575,57 +575,11 @@ return {
       end,
     },
 
-    -- ── Render Markdown ───────────────────────────────────────
-    -- Renders markdown in-buffer: headings, code blocks, tables, checkboxes
-    -- No browser needed — live preview inside nvim itself
-    -- Requires treesitter markdown parser (already in treesitter.lua)
-    {
-      "MeanderingProgrammer/render-markdown.nvim",
-      ft           = { "markdown" },
-      dependencies = { "nvim-treesitter/nvim-treesitter", "nvim-tree/nvim-web-devicons" },
-      config = function()
-        require("render-markdown").setup({
-        -- Heading levels get progressively indented and colored
-        heading = { enabled = true },
-        -- Code blocks get a background highlight and the language label
-        code = { enabled = true, style = "full" },
-        -- Tables rendered with proper border characters
-        pipe_table = { enabled = true },
-        -- Bullet list markers replaced with unicode symbols
-        bullet = { enabled = true },
-        -- Checkboxes: default [ ] / [x], plus custom states for richer todo
-        -- tracking. Requires conceallevel=2 (set per-FT in autocommands.lua)
-        -- so the raw "[ ]" markup is hidden and only the glyph is shown.
-        checkbox = {
-          enabled = true,
-          position  = "inline",
-          unchecked = { icon = "󰄱 ", highlight = "RenderMarkdownUnchecked" },
-          checked   = { icon = "󰱒 ", highlight = "RenderMarkdownChecked",   scope_highlight = "@markup.strikethrough" },
-          custom = {
-            todo        = { raw = "[ ]", rendered = "󰄱 ", highlight = "RenderMarkdownUnchecked" },
-            doing       = { raw = "[/]", rendered = "󰪞 ", highlight = "DiagnosticWarn"          },
-            done        = { raw = "[x]", rendered = "󰱒 ", highlight = "RenderMarkdownChecked", scope_highlight = "@markup.strikethrough" },
-            cancelled   = { raw = "[-]", rendered = "󰅖 ", highlight = "Comment",               scope_highlight = "@markup.strikethrough" },
-            important   = { raw = "[!]", rendered = "󰀦 ", highlight = "DiagnosticError"        },
-            question    = { raw = "[?]", rendered = "󰘥 ", highlight = "DiagnosticInfo"         },
-            star        = { raw = "[*]", rendered = "󰓎 ", highlight = "DiagnosticWarn"         },
-          },
-        },
-        })
-        -- Markview is the default renderer; disable render-markdown on load.
-        -- Toggle with <leader>mm to switch back.
-        pcall(vim.cmd, "RenderMarkdown disable")
-      end,
-    },
-
-    -- ── Markview (alternative markdown renderer, kept alongside) ───
-    -- Installed parallel to render-markdown so you can A/B them.
-    -- markview ships richer defaults out-of-the-box: callouts, LaTeX,
-    -- HTML, alignment-aware tables, per-state checkboxes.
-    -- :MdRenderer markview | render-markdown   — switch active renderer
-    -- <leader>mm                                — toggle
-    -- Only one runs at a time (both target the markdown filetype).
-    -- markview starts disabled so render-markdown is the default.
+    -- ── Markview — markdown renderer ──────────────────────────
+    -- In-buffer markdown rendering with callouts, LaTeX, HTML,
+    -- per-state checkboxes, alignment-aware tables. Live hybrid
+    -- mode keeps the cursor line raw while everything else is
+    -- rendered, in both normal AND insert mode.
     {
       "OXY2DEV/markview.nvim",
       ft           = { "markdown" },

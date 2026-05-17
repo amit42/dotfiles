@@ -111,14 +111,33 @@ local function augroup(name)
   vim.api.nvim_create_autocmd("FileType", {
     group = augroup("markdown_settings"),
     pattern = { "markdown", "md" },
-    callback = function()
+    callback = function(ev)
       vim.opt_local.wrap     = true
       vim.opt_local.spell    = true   -- spell check in markdown
       vim.opt_local.linebreak = true
-      -- conceallevel=2 lets render-markdown.nvim hide raw `[ ]` / `[x]`
-      -- markup and show its rendered checkbox glyphs instead. Global
-      -- default is 0 (set in options.lua) for non-markdown files.
+      -- conceallevel=2 lets markdown renderers hide raw `[ ]` markup
+      -- and show their rendered glyphs instead.
       vim.opt_local.conceallevel = 2
+
+      -- <leader>mc — toggle / insert checkbox on the current line.
+      --   [ ] → [x]   (mark done)
+      --   [x] → [ ]   (unmark)
+      --   bullet without checkbox ("- foo") → "- [ ] foo"
+      --   otherwise: do nothing
+      vim.keymap.set("n", "<leader>mc", function()
+        local line = vim.api.nvim_get_current_line()
+        local new
+        if line:match("%[[xX]%]") then
+          new = line:gsub("%[[xX]%]", "[ ]", 1)
+        elseif line:match("%[ %]") then
+          new = line:gsub("%[ %]", "[x]", 1)
+        elseif line:match("^%s*[-*+]%s+") and not line:match("%[.%]") then
+          new = line:gsub("^(%s*[-*+]%s+)", "%1[ ] ", 1)
+        else
+          return
+        end
+        vim.api.nvim_set_current_line(new)
+      end, { buffer = ev.buf, silent = true, desc = "Toggle markdown checkbox" })
     end,
   })
   
