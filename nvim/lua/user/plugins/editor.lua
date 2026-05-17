@@ -613,4 +613,29 @@ return {
       },
     },
 
+    -- ── Markview (alternative markdown renderer, kept alongside) ───
+    -- Installed parallel to render-markdown so you can A/B them.
+    -- markview ships richer defaults out-of-the-box: callouts, LaTeX,
+    -- HTML, alignment-aware tables, per-state checkboxes.
+    -- :MdRenderer markview | render-markdown   — switch active renderer
+    -- <leader>mm                                — toggle
+    -- Only one runs at a time (both target the markdown filetype).
+    -- markview starts disabled so render-markdown is the default.
+    {
+      "OXY2DEV/markview.nvim",
+      ft           = { "markdown" },
+      dependencies = { "nvim-treesitter/nvim-treesitter", "nvim-tree/nvim-web-devicons" },
+      config = function()
+        require("markview").setup({
+          preview = {
+            modes        = { "n", "no", "c" },   -- raw text in insert mode
+            hybrid_modes = { "n" },               -- live render-on-edit in normal
+            icon_provider = "devicons",
+          },
+        })
+        -- Off by default — toggle with <leader>mm
+        pcall(vim.cmd, "Markview disable")
+      end,
+    },
+
   }

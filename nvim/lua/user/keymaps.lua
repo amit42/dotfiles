@@ -136,6 +136,31 @@ keymap("n", "<leader>l", ":Lazy<CR>", opts)
 keymap("n", "<leader>d", function() require("user.dashboard").open() end,
   vim.tbl_extend("force", opts, { desc = "Open dashboard" }))
 
+-- Markdown renderer A/B toggle.
+-- :MdRenderer markview         → switch to markview
+-- :MdRenderer render-markdown  → switch to render-markdown
+-- <leader>mm                   → toggle between the two
+vim.g._md_renderer = "render-markdown"
+local function md_set(target)
+  if target == "markview" then
+    pcall(vim.cmd, "RenderMarkdown disable")
+    pcall(vim.cmd, "Markview enable")
+    vim.g._md_renderer = "markview"
+  else
+    pcall(vim.cmd, "Markview disable")
+    pcall(vim.cmd, "RenderMarkdown enable")
+    vim.g._md_renderer = "render-markdown"
+  end
+  vim.notify("Markdown renderer: " .. vim.g._md_renderer)
+end
+vim.api.nvim_create_user_command("MdRenderer", function(o) md_set(o.args) end, {
+  nargs    = 1,
+  complete = function() return { "markview", "render-markdown" } end,
+})
+keymap("n", "<leader>mm", function()
+  md_set(vim.g._md_renderer == "render-markdown" and "markview" or "render-markdown")
+end, vim.tbl_extend("force", opts, { desc = "Toggle markdown renderer" }))
+
 -- WSL: gx opens URLs via Windows cmd.exe instead of xdg-open (which times out in WSL)
 if vim.fn.has("wsl") == 1 then
   vim.ui.open = function(path)
