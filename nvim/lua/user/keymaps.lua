@@ -140,7 +140,7 @@ keymap("n", "<leader>d", function() require("user.dashboard").open() end,
 -- :MdRenderer markview         → switch to markview
 -- :MdRenderer render-markdown  → switch to render-markdown
 -- <leader>mm                   → toggle between the two
-vim.g._md_renderer = "render-markdown"
+vim.g._md_renderer = "markview"
 local function md_set(target)
   if target == "markview" then
     pcall(vim.cmd, "RenderMarkdown disable")

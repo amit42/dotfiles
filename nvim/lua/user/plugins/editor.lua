@@ -583,7 +583,8 @@ return {
       "MeanderingProgrammer/render-markdown.nvim",
       ft           = { "markdown" },
       dependencies = { "nvim-treesitter/nvim-treesitter", "nvim-tree/nvim-web-devicons" },
-      opts = {
+      config = function()
+        require("render-markdown").setup({
         -- Heading levels get progressively indented and colored
         heading = { enabled = true },
         -- Code blocks get a background highlight and the language label
@@ -610,7 +611,11 @@ return {
             star        = { raw = "[*]", rendered = "󰓎 ", highlight = "DiagnosticWarn"         },
           },
         },
-      },
+        })
+        -- Markview is the default renderer; disable render-markdown on load.
+        -- Toggle with <leader>mm to switch back.
+        pcall(vim.cmd, "RenderMarkdown disable")
+      end,
     },
 
     -- ── Markview (alternative markdown renderer, kept alongside) ───
@@ -628,13 +633,16 @@ return {
       config = function()
         require("markview").setup({
           preview = {
-            modes        = { "n", "no", "c" },   -- raw text in insert mode
-            hybrid_modes = { "n" },               -- live render-on-edit in normal
+            -- Modes where rendering is active. Adding "i" enables
+            -- live rendering while you type in insert mode.
+            modes         = { "n", "no", "c", "i" },
+            -- Hybrid mode: the line your cursor is on shows raw
+            -- markdown (so you can edit it), all other lines stay
+            -- rendered. Active in normal AND insert mode.
+            hybrid_modes  = { "n", "i" },
             icon_provider = "devicons",
           },
         })
-        -- Off by default — toggle with <leader>mm
-        pcall(vim.cmd, "Markview disable")
       end,
     },
 
