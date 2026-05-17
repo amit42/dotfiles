@@ -521,6 +521,30 @@ rgf() {
 #        scratch json     → /tmp/scratch.json
 scratch() { nvim "/tmp/scratch.${1:-md}"; }
 
+# todo — open your global TODO file in nvim. Same file every time, so
+# tasks survive across machines (when this repo is synced).
+# Override location with `export TODO_FILE=~/notes/todo.md` in your env.
+# The file is auto-seeded with a starter template on first open. Inside
+# nvim, <leader>mc toggles checkboxes.
+todo() {
+  local f="${TODO_FILE:-$HOME/Desktop/todo.md}"
+  if [[ ! -f "$f" ]]; then
+    mkdir -p "$(dirname "$f")"
+    cat > "$f" <<'EOT'
+# TODO
+
+## In progress
+- [/]
+
+## Pending
+- [ ]
+
+## Done
+EOT
+  fi
+  nvim "$f"
+}
+
 
 # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 # ALIASES: GIT
