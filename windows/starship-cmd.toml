@@ -1,0 +1,120 @@
+# ╔═══════════════════════════════════════════════════════╗
+# ║  starship-cmd.toml — cmd-tuned (fast + WSL aesthetic) ║
+# ║  Activated via STARSHIP_CONFIG in cmd-autorun.cmd     ║
+# ╚═══════════════════════════════════════════════════════╝
+#
+# Visually identical to the zsh prompt's common case (directory + branch
+# + character on two lines, time on the right) but skips modules that
+# spawn subprocesses per prompt (git_status, language versions, k8s, aws).
+#
+# What you lose vs the WSL prompt:
+#   - git status markers (!+?✘) after the branch name
+#   - per-language version badges (py / go / rs / node / c) — these only
+#     fired when relevant files were present anyway
+#   - kubernetes / aws context badges
+# What you keep:
+#   - two-line layout, ❯ on bottom row
+#   - directory with truncation + home substitutions
+#   - git branch with mauve icon
+#   - cmd_duration + time on the right
+#   - catppuccin palette across all of it
+
+format = """
+$directory$git_branch
+$character"""
+
+right_format = """$cmd_duration$time"""
+
+add_newline = true
+command_timeout = 200
+scan_timeout    = 10
+palette = "catppuccin"
+
+[palettes.catppuccin]
+rosewater = "#f5e0dc"
+flamingo  = "#f2cdcd"
+pink      = "#f5c2e7"
+mauve     = "#cba6f7"
+red       = "#f38ba8"
+maroon    = "#eba0ac"
+peach     = "#fab387"
+yellow    = "#f9e2af"
+green     = "#a6e3a1"
+teal      = "#94e2d5"
+sky       = "#89dceb"
+sapphire  = "#74c7ec"
+blue      = "#89b4fa"
+lavender  = "#b4befe"
+text      = "#cdd6f4"
+subtext   = "#a6adc8"
+overlay   = "#6c7086"
+surface   = "#313244"
+base      = "#1e1e2e"
+
+[directory]
+style = "bold blue"
+format = "[$path]($style) "
+truncation_length = 4
+truncate_to_repo = false
+truncation_symbol = "…/"
+fish_style_pwd_dir_length = 1
+
+[git_branch]
+symbol = ""
+style  = "mauve"
+format = "[$symbol $branch]($style) "
+
+[git_status]
+disabled = true                 # heavy: shells out to git per prompt
+
+[character]
+# > (cmd's native prompt char) instead of zsh's ❯ — a glance at the
+# prompt line tells you which shell you're in. Catppuccin colors.
+success_symbol = "[>](bold green)"
+error_symbol   = "[>](bold red)"
+vimcmd_symbol  = "[>](bold mauve)"
+
+[cmd_duration]
+min_time = 1000
+format = "[$duration]($style) "
+style  = "overlay"
+
+[time]
+disabled    = false
+format      = "[$time]($style)"
+style       = "overlay"
+time_format = "%H:%M"
+
+# ── Disable every subprocess-spawning module ─────────────────────────
+[python]
+disabled = true
+[golang]
+disabled = true
+[rust]
+disabled = true
+[nodejs]
+disabled = true
+[c]
+disabled = true
+[ruby]
+disabled = true
+[java]
+disabled = true
+[php]
+disabled = true
+[dotnet]
+disabled = true
+[aws]
+disabled = true
+[gcloud]
+disabled = true
+[azure]
+disabled = true
+[kubernetes]
+disabled = true
+[docker_context]
+disabled = true
+[terraform]
+disabled = true
+[package]
+disabled = true

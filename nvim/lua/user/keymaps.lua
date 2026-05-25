@@ -39,6 +39,17 @@ keymap("n", "<leader>w", ":w<CR>", opts)          -- Space+w = save
 keymap("n", "<leader>q", ":q<CR>", opts)          -- Space+q = quit
 keymap("n", "<leader>Q", ":qa!<CR>", opts)        -- Space+Q = force quit all
 
+-- Open the vim learning guide from the active nvim config dir.
+-- Portable across OSes via stdpath("config").
+keymap("n", "<leader>?", function()
+  local path = vim.fn.stdpath("config") .. "/VIM_GUIDE.md"
+  if vim.fn.filereadable(path) == 1 then
+    vim.cmd("edit " .. vim.fn.fnameescape(path))
+  else
+    vim.notify("VIM_GUIDE.md not found at " .. path, vim.log.levels.WARN)
+  end
+end, opts)
+
 -- Clear search highlights
 -- after searching, press Escape to clear highlight
 keymap("n", "<Esc>", ":nohlsearch<CR>", opts)

@@ -4,46 +4,61 @@
 # ║  Install: bash install.sh                            ║
 # ╚═══════════════════════════════════════════════════════╝
 #
-# Mirrors the WezTerm config visually so both terminals look identical.
-# Full reference: https://ghostty.org/docs/config/reference
+# Mirrors the WezTerm config visually wherever Ghostty supports it.
+# Caveat: Ghostty uses NATIVE tabs (macOS-styled, GTK on Linux) — the
+# colored-pill tab style from WezTerm's format-tab-title is not
+# achievable; Ghostty tabs are system-themed.
+# Reference: https://ghostty.org/docs/config/reference
 
 # ── Font ─────────────────────────────────────────────────
 font-family = JetBrainsMono Nerd Font
-font-size = 13
-# Disable ligatures — the nvim dashboard relies on byte-precise cell
-# widths for gradient highlights and column dividers; ligatures shift
-# those widths and break alignment.
+font-size   = 13
+# Disable ligatures so byte-precise cell widths line up (matches WezTerm).
 font-feature = -calt
 font-feature = -clig
 font-feature = -liga
+# Smoother text rendering (Ghostty does this by default; explicit for clarity)
+font-thicken = true
 
 # ── Theme — Catppuccin Mocha ─────────────────────────────
 # Same palette as nvim + tmux + starship + wezterm.
 theme = Catppuccin Mocha
 
+# Explicit cursor + selection colors (match WezTerm catppuccin) so highlights
+# look identical across terminals.
+cursor-color           = #cba6f7
+selection-background   = #45475a
+selection-foreground   = #cdd6f4
+
 # ── Startup directory ────────────────────────────────────
-# Open new surfaces in ~/Desktop. On macOS/Linux this resolves correctly.
-# WSL: zshrc detects WSL and re-cds into the Windows Desktop on first shell.
+# Open new surfaces in ~/Desktop. zshrc handles the WSL→Windows path swap.
 working-directory = ~/Desktop
 
 # ── Window ───────────────────────────────────────────────
-background-opacity = 0.95
-background-blur-radius = 20
-window-padding-x = 12
-window-padding-y = 8
-window-padding-balance = true
-# Borderless feel like wezterm window_decorations = "RESIZE"
-window-decoration = true
-# Open maximized on launch (matches wezterm gui-startup → maximize)
-window-save-state = always
-maximize = true
+background-opacity      = 0.95
+background-blur-radius  = 20
+window-padding-x        = 12
+window-padding-y        = 8
+window-padding-balance  = true
+# Hide title bar like wezterm window_decorations = "RESIZE"
+window-decoration       = true
+# Open maximized + remember window state across launches
+window-save-state       = always
+maximize                = true
+# Dim split panes that aren't focused, matching wezterm's inactive_pane look
+unfocused-split-opacity = 0.85
+# Hide the mouse cursor while typing so it doesn't sit on top of text
+mouse-hide-while-typing = true
 
 # ── Tab bar ──────────────────────────────────────────────
-# Native macOS tabs styled by the theme.
+# macOS: native tabs styled by the system theme (closest to wezterm look).
+# Linux/GTK: ghostty draws its own tab bar — these options apply there.
 macos-titlebar-style = tabs
+gtk-tabs-location    = top
+gtk-wide-tabs        = false
 
 # ── Cursor ───────────────────────────────────────────────
-cursor-style = bar
+cursor-style       = bar
 cursor-style-blink = true
 
 # ── Scrollback ───────────────────────────────────────────
@@ -59,16 +74,29 @@ command = /bin/zsh -l
 macos-option-as-alt = left
 
 # ── Misc ─────────────────────────────────────────────────
-bell-features = no-audio,no-system
-# Prompt before closing — protects against fat-finger Cmd+W when a long
-# command, tmux session, or unsaved nvim buffer is running.
-confirm-close-surface = true
+bell-features            = no-audio,no-system
+# Prompt before closing — guards against fat-finger Cmd+W with running work.
+confirm-close-surface    = true
+# Block paste of unbounded payloads — protects against clipboard hijacks.
+clipboard-paste-protection = true
+# Trim trailing whitespace from pasted text so it doesn't auto-execute.
+clipboard-trim-trailing-spaces = true
+# Quit ghostty when the last window closes (consistent with wezterm exit).
+quit-after-last-window-closed = true
 
 # ── Keybindings ──────────────────────────────────────────
-# Match wezterm: Ctrl+Shift+T new tab, Ctrl+Shift+W close tab,
-# Ctrl+Tab cycle, Cmd+R reload config.
+# Match wezterm shortcuts so muscle memory carries over between terminals.
 keybind = ctrl+shift+t=new_tab
 keybind = ctrl+shift+w=close_surface
 keybind = ctrl+tab=next_tab
 keybind = ctrl+shift+tab=previous_tab
 keybind = super+r=reload_config
+# Font size — matches wezterm's Ctrl+=/Ctrl+-/Ctrl+0
+keybind = ctrl+equal=increase_font_size:1
+keybind = ctrl+minus=decrease_font_size:1
+keybind = ctrl+zero=reset_font_size
+# Toggle fullscreen (wezterm uses F11)
+keybind = f11=toggle_fullscreen
+# Copy / paste (Ctrl+Shift+C/V) for parity with wezterm
+keybind = ctrl+shift+c=copy_to_clipboard
+keybind = ctrl+shift+v=paste_from_clipboard

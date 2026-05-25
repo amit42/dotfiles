@@ -481,6 +481,32 @@ alias vim='nvim'
 # so edits go into version control automatically.
 alias zshedit='nvim ~/Desktop/dotfiles/dotfiles/zsh/zshrc'
 
+# vimg — open the vim learning guide from anywhere.
+# Uses the deployed nvim config dir so this works on any OS.
+alias vimg='nvim "${XDG_CONFIG_HOME:-$HOME/.config}/nvim/VIM_GUIDE.md"'
+
+# wtn — rename the CURRENT WezTerm tab from the shell ("w"ezterm "t"ab "n"ame).
+# Named wtn to avoid clash with `tn` (tmux new-session).
+# Usage: wtn my-tab-name
+# Detects which wezterm binary to call (wezterm.exe under WSL where the
+# Windows binary is on PATH; bare `wezterm` on Mac/Linux native).
+wtn() {
+  if [[ -z "$WEZTERM_PANE" ]]; then
+    echo "wtn: not running inside a WezTerm pane" >&2
+    return 1
+  fi
+  local wt
+  if command -v wezterm.exe &>/dev/null; then
+    wt=wezterm.exe
+  elif command -v wezterm &>/dev/null; then
+    wt=wezterm
+  else
+    echo "wtn: wezterm CLI not on PATH" >&2
+    return 1
+  fi
+  "$wt" cli set-tab-title "$*"
+}
+
 # Safer file operations — -i prompts before overwriting/deleting,
 # -v prints what was done. Prevents accidental data loss.
 # To bypass for scripting: \cp, \mv, \rm (backslash skips aliases).
@@ -1838,17 +1864,51 @@ ts() {
     local is_wsl=false
     grep -qi microsoft /proc/version 2>/dev/null && is_wsl=true
 
-    local cmd="tmux new-session -d -s '$name' -c '$PWD' -n 'editor' \"zsh -ic 'nvim; exec zsh'\""
-    cmd+=" \; new-window -n 'terminal' -c '$PWD'"
-    cmd+=" \; new-window -n 'logs' -c '$PWD'"
-    [[ "$is_wsl" == true ]] && cmd+=" \; new-window -n 'cmd' -c '$PWD' 'cmd.exe'"
+    # Nerd Font icons prefix each window name. Embedded via printf with
+    # UTF-8 escapes so the source file stays pure ASCII and the bytes
+    # can't be silently stripped by editor encoding settings.
+    #   U+E7C5  nf-custom-vim         → EDITOR
+    #   U+F489  zsh/shell glyph       → TERMINAL
+    #   U+EBC4  nf-cod-terminal-cmd   → CMD
+    #   U+F021A md-icon (logs)        → LOGS    (4-byte UTF-8)
+    #   U+F035B md-icon (robot/agent) → AGENT   (4-byte UTF-8)
+    local n_editor   n_terminal n_logs n_cmd n_agent
+    n_editor=$(printf   '\xee\x9f\x85')         #
+    n_terminal=$(printf '\xef\x92\x89')         #
+    n_cmd=$(printf      '\xee\xaf\x84')         #
+    n_logs=$(printf     '\xf3\xb0\x88\x9a')     # (4-byte)
+    n_agent=$(printf    '\xf3\xb0\x8d\x9b')     # (4-byte)
+
+    # Pad each "icon + name" to a fixed character width using zsh's right-pad
+    # parameter expansion (counts characters, so icons count as 1 each).
+    # tmux's #{p<N>:#W} format would do this server-side but isn't reliable
+    # across versions, so we bake the spaces into the name itself.
+    local target_w=11   # tightest fit — longest is "<icon>  TERMINAL" = 11 chars
+    local w_editor="${n_editor}  EDITOR"
+    local w_terminal="${n_terminal}  TERMINAL"
+    local w_logs="${n_logs}  LOGS"
+    local w_cmd="${n_cmd}  CMD"
+    local w_agent="${n_agent}  AGENT"
+    w_editor="${(r:$target_w:)w_editor}"
+    w_terminal="${(r:$target_w:)w_terminal}"
+    w_logs="${(r:$target_w:)w_logs}"
+    w_cmd="${(r:$target_w:)w_cmd}"
+    w_agent="${(r:$target_w:)w_agent}"
+
+    local cmd="tmux new-session -d -s '$name' -c '$PWD' -n '${w_editor}' \"zsh -ic 'nvim; exec zsh'\""
+    cmd+=" \; new-window -n '${w_terminal}' -c '$PWD'"
+    cmd+=" \; new-window -n '${w_logs}' -c '$PWD'"
+    [[ "$is_wsl" == true ]] && cmd+=" \; new-window -n '${w_cmd}' -c '$PWD' 'cmd.exe'"
     # --dangerously-skip-permissions:
     #   • bypasses the per-folder "Do you trust this folder?" dialog
     #   • auto-allows Read/Edit/Bash on cwd without prompting
     # Safe here because ts() only spawns sessions in dirs you opened
     # yourself (your own projects). Drop this flag for one-off launches
     # in untrusted dirs.
-    cmd+=" \; new-window -n 'agent' -c '$PWD' \"zsh -ic 'claude --dangerously-skip-permissions; exec zsh'\""
+    # --continue: resume the most recent Claude session for this directory.
+    # Falls back to a fresh `claude` if no previous session exists (claude
+    # --continue exits non-zero in that case, so the `||` triggers).
+    cmd+=" \; new-window -n '${w_agent}' -c '$PWD' \"zsh -ic 'claude --continue --dangerously-skip-permissions || claude --dangerously-skip-permissions; exec zsh'\""
     cmd+=" \; select-window -t '$name:1'"
     cmd+=" \; attach-session -t '$name'"
     eval "$cmd"

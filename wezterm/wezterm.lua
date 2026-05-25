@@ -74,43 +74,125 @@ local function startup_dir()
 end
 config.default_cwd = startup_dir()
 
--- Maximize on launch. WezTerm has no boolean for this; the documented
--- approach is a gui-startup event that spawns the window then maximizes
--- it via the gui handle. Use window:toggle_fullscreen() for true fullscreen.
+-- Maximize on launch + prompt to name the first tab. WezTerm has no boolean
+-- for maximize; the documented approach is a gui-startup event. We piggyback
+-- the prompt onto the same handler so it fires once per fresh window.
 wezterm.on("gui-startup", function(cmd)
-  local _, _, window = wezterm.mux.spawn_window(cmd or {})
-  window:gui_window():maximize()
+  local tab, pane, window = wezterm.mux.spawn_window(cmd or {})
+  local gui = window:gui_window()
+  gui:maximize()
+  wezterm.time.call_after(0.15, function()
+    gui:perform_action(act.PromptInputLine({
+      description = "Name first tab (Enter to skip):",
+      action = wezterm.action_callback(function(win, _, line)
+        if line and #line > 0 then
+          win:active_tab():set_title(line)
+        end
+      end),
+    }), pane)
+  end)
 end)
 
 -- Tab bar
 config.enable_tab_bar = true
-config.use_fancy_tab_bar = false             -- use retro tab bar (matches terminal style)
-config.hide_tab_bar_if_only_one_tab = true   -- hide bar when only one tab open
-config.tab_bar_at_bottom = true             -- tab bar at bottom like tmux status
+config.use_fancy_tab_bar = true              -- fancy tab bar gives clickable × close + macOS-style chrome
+config.hide_tab_bar_if_only_one_tab = false  -- always show so "+" new tab button is visible
+config.tab_bar_at_bottom = false             -- tab bar at top (bottom is reserved for tmux status)
+config.show_new_tab_button_in_tab_bar = true -- explicit so it doesn't get disabled silently
+config.tab_max_width = 50                    -- allow wider tabs (default 16) so longer titles fit
+
+-- Tab bar font (fancy tab bar only). Slightly smaller than terminal font
+-- so the bar is compact vertically while horizontal padding stays generous.
+config.window_frame = {
+  font      = wezterm.font("JetBrainsMono Nerd Font", { weight = "Regular" }),
+  font_size = 11.0,
+  active_titlebar_bg   = "#1e1e2e",
+  inactive_titlebar_bg = "#1e1e2e",
+}
 
 -- Tab bar colors — Catppuccin Mocha
 config.colors = {
   tab_bar = {
     background = "#1e1e2e",
-    active_tab = {
-      bg_color = "#313244",
-      fg_color = "#cba6f7",
-      intensity = "Bold",
-    },
-    inactive_tab = {
-      bg_color = "#1e1e2e",
-      fg_color = "#6c7086",
-    },
     inactive_tab_hover = {
       bg_color = "#313244",
       fg_color = "#cdd6f4",
     },
     new_tab = {
-      bg_color = "#1e1e2e",
-      fg_color = "#6c7086",
+      bg_color = "#313244",   -- surface1 — visible against #1e1e2e tab bar
+      fg_color = "#cdd6f4",   -- text — bright "+"
+    },
+    new_tab_hover = {
+      bg_color = "#cba6f7",   -- mauve highlight on hover
+      fg_color = "#1e1e2e",
     },
   },
 }
+
+-- Per-tab palette with both vibrant (active) and dim (inactive) variants.
+-- Each tab becomes a coloured "pill" with rounded Nerd-Font caps; active
+-- pops bright, inactive shows a dim version of the same accent so every
+-- tab keeps its identity but the active one is unmistakable.
+local tab_palette_bright = {
+  "#f38ba8",  -- red
+  "#fab387",  -- peach
+  "#f9e2af",  -- yellow
+  "#a6e3a1",  -- green
+  "#89dceb",  -- sky
+  "#cba6f7",  -- mauve
+  "#f5c2e7",  -- pink
+  "#94e2d5",  -- teal
+}
+local tab_palette_dim = {
+  "#5e3947",  -- dim red
+  "#5e4738",  -- dim peach
+  "#5e5742",  -- dim yellow
+  "#3f5e3f",  -- dim green
+  "#385a62",  -- dim sky
+  "#51425e",  -- dim mauve
+  "#5e4d58",  -- dim pink
+  "#3f5e58",  -- dim teal
+}
+
+-- Powerline-style rounded caps (require Nerd Font; you have JBM NF).
+--   U+E0B6 = left half-circle, U+E0B4 = right half-circle
+local CAP_LEFT  = utf8.char(0xE0B6)
+local CAP_RIGHT = utf8.char(0xE0B4)
+
+wezterm.on("format-tab-title", function(tab, _, _, _, _, _)
+  local i = (tab.tab_index % #tab_palette_bright) + 1
+  local bg   = tab.is_active and tab_palette_bright[i] or tab_palette_dim[i]
+  local fg   = tab.is_active and "#1e1e2e" or "#cdd6f4"
+  local bar  = "#1e1e2e"
+
+  local body
+  if tab.tab_title and #tab.tab_title > 0 then
+    body = string.format("%d  %s", tab.tab_index + 1, tab.tab_title)
+  else
+    body = tostring(tab.tab_index + 1)
+  end
+  local label = " " .. body .. " "
+
+  -- Layout:  CAP_LEFT (in tab bg, on bar) | label (tab bg) | CAP_RIGHT (tab bg on bar)
+  -- This produces a rounded "pill" sitting on the bar.
+  local segments = {
+    { Background = { Color = bar } },
+    { Foreground = { Color = bg } },
+    { Text       = CAP_LEFT },
+    { Background = { Color = bg } },
+    { Foreground = { Color = fg } },
+  }
+  if tab.is_active then
+    table.insert(segments, { Attribute = { Intensity = "Bold" } })
+  end
+  table.insert(segments, { Text = label })
+  table.insert(segments, { Background = { Color = bar } })
+  table.insert(segments, { Foreground = { Color = bg } })
+  table.insert(segments, { Text       = CAP_RIGHT })
+  -- One bar-coloured space between adjacent pills so they don't touch.
+  table.insert(segments, { Text       = " " })
+  return segments
+end)
 
 -- ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 -- CURSOR
@@ -126,10 +208,33 @@ config.scrollback_lines = 10000
 -- ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 -- SHELL
 -- ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
--- macOS: use zsh login shell so ~/.zprofile is sourced (PATH, brew, etc.)
--- WSL: uncomment the wsl line and comment out the zsh line
-config.default_prog = { "/bin/zsh", "-l" }
--- config.default_prog = { "wsl.exe", "--distribution", "Ubuntu", "--exec", "/bin/zsh", "-l" }
+-- Default shell: zsh on Mac/Linux, WSL zsh on Windows.
+if wezterm.target_triple:find("windows") then
+  config.default_prog = { "wsl.exe", "~", "-d", "Ubuntu", "--exec", "/bin/zsh", "-l" }
+  -- WSL strips Windows env vars unless they're listed in WSLENV. Without
+  -- this the WEZTERM_PANE / WEZTERM_UNIX_SOCKET vars don't reach zsh, so
+  -- `wezterm cli ...` (used by the `wtn` rename helper) fails with
+  -- "not running inside a WezTerm pane".
+  config.set_environment_variables = {
+    WSLENV = "WEZTERM_PANE:WEZTERM_UNIX_SOCKET",
+  }
+else
+  config.default_prog = { "/bin/zsh", "-l" }
+end
+
+-- Launch menu (Ctrl+Shift+Space to open) — lets you spawn alternative shells
+-- without changing the default. Useful on Windows where you may want both
+-- WSL (default) and native cmd (with Clink + Starship).
+if wezterm.target_triple:find("windows") then
+  -- Plain cmd.exe — cmd's AutoRun (set by clink autorun install) handles
+  -- Clink injection + aliases + STARSHIP_CONFIG. Spawning explicit clink
+  -- here injected it twice and slowed startup.
+  config.launch_menu = {
+    { label = "WSL (zsh)",  args = { "wsl.exe", "~", "-d", "Ubuntu", "--exec", "/bin/zsh", "-l" } },
+    { label = "cmd",        args = { "cmd.exe" } },
+    { label = "PowerShell", args = { "pwsh.exe" } },
+  }
+end
 
 -- ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 -- KEYBINDINGS
@@ -138,7 +243,21 @@ config.default_prog = { "/bin/zsh", "-l" }
 -- WezTerm keys here are for tab management and OS-level actions only.
 config.keys = {
   -- Tabs
-  { key = "t",          mods = "CTRL|SHIFT", action = act.SpawnTab("CurrentPaneDomain") },
+  -- Ctrl+Shift+T: spawn a new tab, then immediately prompt for a name.
+  -- Pressing Enter without typing leaves it as just the index — the prompt
+  -- only sets the title if you provide one.
+  { key = "t", mods = "CTRL|SHIFT", action = wezterm.action_callback(function(window, pane)
+      window:perform_action(act.SpawnTab("CurrentPaneDomain"), pane)
+      window:perform_action(act.PromptInputLine({
+        description = "Name new tab (Enter to skip):",
+        action = wezterm.action_callback(function(win, _, line)
+          if line and #line > 0 then
+            win:active_tab():set_title(line)
+          end
+        end),
+      }), pane)
+    end),
+  },
   { key = "w",          mods = "CTRL|SHIFT", action = act.CloseCurrentTab({ confirm = false }) },
   { key = "Tab",        mods = "CTRL",       action = act.ActivateTabRelative(1) },
   { key = "Tab",        mods = "CTRL|SHIFT", action = act.ActivateTabRelative(-1) },
@@ -151,6 +270,12 @@ config.keys = {
       end),
     }),
   },
+
+  -- Launcher — Ctrl+Shift+P (Ctrl+Shift+Space gets eaten by Windows IME).
+  -- FUZZY adds search-as-you-type, LAUNCH_MENU_ITEMS pulls in the launch_menu list.
+  { key = "p",          mods = "CTRL|SHIFT", action = act.ShowLauncherArgs({ flags = "FUZZY|LAUNCH_MENU_ITEMS" }) },
+  -- Direct cmd tab on Windows. Plain cmd.exe — AutoRun loads Clink + Starship.
+  { key = "n",          mods = "CTRL|SHIFT", action = act.SpawnCommandInNewTab({ args = { "cmd.exe" } }) },
 
   -- Copy / Paste
   { key = "c",          mods = "CTRL|SHIFT", action = act.CopyTo("Clipboard") },

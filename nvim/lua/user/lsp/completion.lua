@@ -64,11 +64,11 @@ cmp.setup({
     -- the wrong word.
     ["<CR>"] = cmp.mapping.confirm({ select = false }),
 
-    -- Tab: ACCEPT the suggestion. If nothing is selected yet, auto-pick the
-    -- first item (select=true). Otherwise jump through snippet placeholders.
+    -- Tab: cycle to NEXT item in the menu. If inside a snippet, jump to the
+    -- next placeholder instead. Confirm with <CR>.
     ["<Tab>"] = cmp.mapping(function(fallback)
       if cmp.visible() then
-        cmp.confirm({ select = true })
+        cmp.select_next_item()
       elseif luasnip.expand_or_jumpable() then
         luasnip.expand_or_jump()
       else
@@ -76,10 +76,11 @@ cmp.setup({
       end
     end, { "i", "s" }),
 
-    -- Shift-Tab: jump back through snippet placeholders (no menu cycling
-    -- here — use C-k/Up for that).
+    -- Shift-Tab: cycle to PREVIOUS item; or jump back through snippet placeholders.
     ["<S-Tab>"] = cmp.mapping(function(fallback)
-      if luasnip.jumpable(-1) then
+      if cmp.visible() then
+        cmp.select_prev_item()
+      elseif luasnip.jumpable(-1) then
         luasnip.jump(-1)
       else
         fallback()

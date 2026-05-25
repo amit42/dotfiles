@@ -140,7 +140,7 @@ local function augroup(name)
       end, { buffer = ev.buf, silent = true, desc = "Toggle markdown checkbox" })
     end,
   })
-  
+
   -- ── Close Certain Windows With q ──────────────────────────
   -- Lets you press q to close help, man pages, quickfix
   -- Without this you have to type :q every time

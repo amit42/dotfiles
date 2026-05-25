@@ -120,7 +120,6 @@ return {
                 ["<C-k>"] = actions.move_selection_previous,
                 ["<C-j>"] = actions.move_selection_next,
                 ["<C-q>"] = actions.send_selected_to_qflist + actions.open_qflist,
-                ["<Esc>"] = actions.close,
               },
             },
           },
@@ -502,26 +501,52 @@ return {
     },
 
     -- ── Sessions ──────────────────────────────────────────
-    -- persistence.nvim saves and restores your buffer/window layout per directory
-    -- "s" on the dashboard restores the last session for the current directory
-    -- Useful when returning to a project — reopens all your files where you left off
+    -- persistence.nvim saves your buffer/window layout per directory on quit
+    -- and restores it on the next launch in the same directory.
+    --   - Auto-save: happens on VimLeavePre (no action needed)
+    --   - Auto-restore: on `nvim` with no args, before the dashboard would open
+    --   - Manual restore: <leader>S
     {
       "folke/persistence.nvim",
-      event = "BufReadPre",  -- must load before the first buffer opens to record it
+      lazy = false,                            -- need it loaded at VimEnter for auto-restore
+      priority = 900,                          -- load early but after colorscheme (1000)
       config = function()
         require("persistence").setup({
-          -- Store sessions under nvim's state dir, not config dir
           dir     = vim.fn.stdpath("state") .. "/sessions/",
-          -- What to save: open buffers, cwd, tab layout, window sizes
           options = { "buffers", "curdir", "tabpages", "winsize" },
         })
 
-        -- Space+S to manually restore the session for the current directory
-        -- (the dashboard "s" button does the same thing)
-        vim.keymap.set("n", "<leader>S",
-          function() require("persistence").load() end,
-          { silent = true, desc = "Restore session" }
-        )
+        -- Auto-restore on bare `nvim` (no file args). Runs before the
+        -- dashboard's deferred VimEnter check (100ms), so if a session
+        -- existed, buffers are populated and the dashboard skips itself.
+        -- If no session exists, persistence.load() is a no-op and the
+        -- dashboard opens as usual.
+        vim.api.nvim_create_autocmd("VimEnter", {
+          group  = vim.api.nvim_create_augroup("persistence_autoload", { clear = true }),
+          nested = true,
+          callback = function()
+            if vim.fn.argc(-1) == 0 then
+              pcall(function() require("persistence").load() end)
+              -- The buffer persistence makes active gets a stale half-attach
+              -- from render-markdown / image.nvim / treesitter — only the
+              -- active one, the other tabs are fine because BufEnter fires
+              -- normally on switch. Force a fresh :edit on it to redo every
+              -- attach cleanly. Cursor position is preserved by view save/restore.
+              if vim.bo.buftype == "" and vim.api.nvim_buf_get_name(0) ~= "" then
+                local view = vim.fn.winsaveview()
+                vim.cmd("edit!")
+                vim.fn.winrestview(view)
+              end
+            end
+          end,
+        })
+
+        -- Manual restore — wipe any nomodifiable scratch (dashboard) first
+        -- so persistence can populate buffers cleanly.
+        vim.keymap.set("n", "<leader>S", function()
+          vim.cmd("silent! %bwipeout!")
+          require("persistence").load()
+        end, { silent = true, desc = "Restore session" })
       end,
     },
 
@@ -576,28 +601,51 @@ return {
     },
 
     -- ── Markview — markdown renderer ──────────────────────────
-    -- In-buffer markdown rendering with callouts, LaTeX, HTML,
-    -- per-state checkboxes, alignment-aware tables. Live hybrid
-    -- mode keeps the cursor line raw while everything else is
-    -- rendered, in both normal AND insert mode.
+    -- In-buffer markdown rendering: headings, code blocks, tables, checkboxes.
+    -- render-markdown.nvim — maintained and compatible with nvim 0.12+ and
+    -- the new treesitter TSMatch format. (Replaces markview.nvim, which crashes
+    -- against the newer TSMatch API on nvim 0.12 + nvim-treesitter v1 master.)
     {
-      "OXY2DEV/markview.nvim",
-      ft           = { "markdown" },
+      "MeanderingProgrammer/render-markdown.nvim",
+      lazy         = false,                       -- eager load so its FileType autocmd is registered before any buffer (including session-restored ones) opens
       dependencies = { "nvim-treesitter/nvim-treesitter", "nvim-tree/nvim-web-devicons" },
-      config = function()
-        require("markview").setup({
-          preview = {
-            -- Modes where rendering is active. Adding "i" enables
-            -- live rendering while you type in insert mode.
-            modes         = { "n", "no", "c", "i" },
-            -- Hybrid mode: the line your cursor is on shows raw
-            -- markdown (so you can edit it), all other lines stay
-            -- rendered. Active in normal AND insert mode.
-            hybrid_modes  = { "n", "i" },
-            icon_provider = "devicons",
+      opts = {
+        heading    = { enabled = true },
+        code       = { enabled = true, style = "full" },
+        checkbox   = {
+          enabled = true,
+          checked = { scope_highlight = "@markup.strikethrough" },
+        },
+        pipe_table = { enabled = true },
+        bullet     = { enabled = true },
+      },
+    },
+
+    -- ── Image rendering ───────────────────────────────────────
+    -- Renders images inline in markdown buffers and lets you open
+    -- image files (.png/.jpg/.gif/etc.) directly as picture viewers.
+    -- Requires the terminal to support the Kitty graphics protocol
+    -- (WezTerm does). Inside tmux, also requires `set -g allow-passthrough on`.
+    -- System deps (imagemagick, luarocks, magick rock, libmagickwand-dev on
+    -- Linux) are installed by install.sh.
+    {
+      "3rd/image.nvim",
+      ft   = { "markdown", "png", "jpg", "jpeg", "gif", "webp", "bmp" },
+      opts = {
+        backend = "kitty",
+        integrations = {
+          markdown = {
+            enabled                     = true,
+            clear_in_insert_mode        = true,   -- hide images while typing
+            download_remote_images      = true,
+            only_render_image_at_cursor = true,   -- render the one near cursor only — less laggy
+            filetypes                   = { "markdown" },
           },
-        })
-      end,
+        },
+        max_width_window_percentage  = 80,
+        max_height_window_percentage = 50,
+        window_overlap_clear_enabled = true,      -- redraw when another window overlaps
+      },
     },
 
   }

@@ -39,6 +39,7 @@ CONFIG="$HOME/.config"
 log "Config target   : $CONFIG"
 echo ""
 
+
 safe_copy() {
   local src="$1"
   local dst="$2"
@@ -86,19 +87,56 @@ echo "── Tools ────────────────────�
 install_brew_pkg() {
   if check_cmd "$1"; then
     warn "$1 already installed — skipping"
-  else
-    log "Installing $1..."
-    brew install "$1" && success "Installed $1"
+    return 0
   fi
+  log "Installing $1..."
+  if brew install "$1" 2>/dev/null; then
+    success "Installed $1"
+  else
+    warn "Failed to install $1 (may not be in brew)"
+  fi
+}
+
+apt_pkg_installed() {
+  dpkg-query -W -f='${Status}' "$1" 2>/dev/null | grep -q "ok installed"
 }
 
 install_apt_pkg() {
   local cmd="$1" pkg="$2"
-  if check_cmd "$cmd" || dpkg -s "$pkg" &>/dev/null 2>&1; then
+  if check_cmd "$cmd" || apt_pkg_installed "$pkg"; then
     warn "$cmd already installed — skipping"
+    return 0
+  fi
+  log "Installing $cmd..."
+  if sudo apt-get install -y "$pkg" 2>/dev/null; then
+    success "Installed $cmd"
   else
-    log "Installing $cmd..."
-    sudo apt-get install -y "$pkg" && success "Installed $cmd"
+    warn "Failed to install $cmd ($pkg may not be in apt repo)"
+  fi
+}
+
+# install_pipx_pkg <package>
+# Installs a Python tool via pipx (isolated venv, PATH-added, immune to PEP 668).
+# Use for tools not packaged reliably across apt versions (ruff, black, isort).
+install_pipx_pkg() {
+  local pkg="$1"
+  if check_cmd "$pkg"; then
+    warn "$pkg already installed — skipping"
+    return 0
+  fi
+  if pipx list --short 2>/dev/null | awk '{print $1}' | grep -qx "$pkg"; then
+    warn "$pkg already installed (pipx) — skipping"
+    return 0
+  fi
+  if ! check_cmd pipx; then
+    warn "pipx not installed — skipping $pkg (install pipx then re-run)"
+    return 0
+  fi
+  log "Installing $pkg via pipx..."
+  if pipx install "$pkg" 2>/dev/null; then
+    success "Installed $pkg"
+  else
+    warn "Failed to install $pkg via pipx"
   fi
 }
 
@@ -174,6 +212,71 @@ else
 fi
 
 echo ""
+echo "── Formatters / Linters ──────────────────────────────"
+# Python tools (black, isort, ruff) — Mason can't install these on
+# modern Ubuntu/WSL due to PEP 668 (externally-managed-environment).
+# clang-format is also better managed via the OS package manager
+# (Mason's tarball mirror flakes). Install once here so conform.nvim
+# and nvim-lint find them on PATH.
+
+if [[ "$OS" == "mac" ]] && check_cmd brew; then
+  install_brew_pkg black
+  install_brew_pkg isort
+  install_brew_pkg ruff
+  install_brew_pkg clang-format
+elif [[ "$OS" == "linux" ]] || [[ "$OS" == "wsl" ]]; then
+  install_apt_pkg black black
+  install_apt_pkg isort isort
+  install_apt_pkg clang-format clang-format
+  # ruff isn't in Ubuntu apt repos (newer Rust-based tool); install via pipx,
+  # which gives an isolated venv and adds the binary to PATH automatically.
+  install_apt_pkg pipx pipx
+  install_pipx_pkg ruff
+fi
+
+echo ""
+echo "── Image rendering deps (image.nvim) ─────────────────"
+# image.nvim renders pictures inline in nvim using the terminal's Kitty
+# graphics protocol. Needs:
+#   - imagemagick (the `convert` binary)
+#   - libmagickwand-dev (Linux only — C headers for the lua rock)
+#   - luarocks
+#   - the `magick` lua rock built against Lua 5.1 (LuaJIT-compatible)
+
+if [[ "$OS" == "mac" ]] && check_cmd brew; then
+  install_brew_pkg imagemagick
+  install_brew_pkg luarocks
+elif [[ "$OS" == "linux" ]] || [[ "$OS" == "wsl" ]]; then
+  install_apt_pkg convert imagemagick
+  install_apt_pkg luarocks luarocks
+  # Dev headers for the magick lua rock — no associated command, install by package name
+  if apt_pkg_installed libmagickwand-dev; then
+    warn "libmagickwand-dev already installed — skipping"
+  else
+    log "Installing libmagickwand-dev..."
+    sudo apt-get install -y libmagickwand-dev 2>/dev/null \
+      && success "Installed libmagickwand-dev" \
+      || warn "Failed to install libmagickwand-dev"
+  fi
+fi
+
+# magick lua rock — image.nvim binds to ImageMagick through this.
+# --local installs to ~/.luarocks (no sudo); --lua-version=5.1 matches LuaJIT
+# which is what nvim uses.
+if check_cmd luarocks; then
+  if luarocks --lua-version=5.1 --local list 2>/dev/null | grep -q "^magick"; then
+    warn "magick lua rock already installed — skipping"
+  else
+    log "Installing magick lua rock..."
+    luarocks --lua-version=5.1 --local install magick 2>/dev/null \
+      && success "Installed magick lua rock" \
+      || warn "Failed to install magick lua rock"
+  fi
+else
+  warn "luarocks not found — skipping magick rock install"
+fi
+
+echo ""
 echo "── Nvim ──────────────────────────────────────────────"
 
 if check_cmd nvim; then
@@ -240,9 +343,21 @@ fi
 
 echo ""
 echo "── WezTerm ───────────────────────────────────────────"
-# WezTerm reads ~/.wezterm.lua on macOS/Linux
-# and %USERPROFILE%\.wezterm.lua on Windows
-WEZTERM_CONFIG="$HOME/.wezterm.lua"
+# WezTerm reads ~/.wezterm.lua on macOS/Linux and %USERPROFILE%\.wezterm.lua
+# on Windows. On WSL the WezTerm binary runs on the Windows host, so we
+# deploy to /mnt/c/Users/<user>/.wezterm.lua, not the WSL home.
+if [[ "$OS" == "wsl" ]]; then
+  WIN_USER=$(cmd.exe /C 'echo %USERNAME%' 2>/dev/null | tr -d '\r\n')
+  if [[ -n "$WIN_USER" && -d "/mnt/c/Users/$WIN_USER" ]]; then
+    WEZTERM_CONFIG="/mnt/c/Users/$WIN_USER/.wezterm.lua"
+  else
+    WEZTERM_CONFIG="$HOME/.wezterm.lua"
+    warn "Could not detect Windows user — falling back to WSL home (WezTerm may not read this path)"
+  fi
+else
+  WEZTERM_CONFIG="$HOME/.wezterm.lua"
+fi
+
 if [[ -f "$DOTFILES/wezterm/wezterm.lua" ]]; then
   if [[ -f "$WEZTERM_CONFIG" ]]; then
     warn "Backing up $WEZTERM_CONFIG → $WEZTERM_CONFIG.bak"
@@ -278,7 +393,7 @@ echo "  Nvim      → $CONFIG/nvim"
 echo "  Zsh       → $CONFIG/zsh/zshrc"
 echo "  Tmux      → $CONFIG/tmux/tmux.conf"
 echo "  Starship  → $CONFIG/starship.toml"
-echo "  WezTerm   → $HOME/.wezterm.lua"
+echo "  WezTerm   → ${WEZTERM_CONFIG:-$HOME/.wezterm.lua}"
 echo ""
 echo "  Next steps:"
 echo "  1. source ~/.zshrc"

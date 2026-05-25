@@ -54,18 +54,22 @@ require("mason-tool-installer").setup({
   ensure_installed = {
     -- Formatters
     "stylua",             -- Lua
-    "black",              -- Python
-    "isort",              -- Python imports
+    -- black + isort: install system-wide via pipx — Mason's pip install
+    -- fails on Ubuntu/WSL with PEP 668 (externally-managed-environment).
+    --   pipx install black
+    --   pipx install isort
     "goimports",          -- Go (also adds missing imports)
     -- gofmt ships with Go toolchain, not a Mason package
     -- rustfmt ships with Rust toolchain (rustup), not a Mason package
     "google-java-format", -- Java
-    "clang-format",       -- C / C++
+    -- clang-format: usually already system-installed via the OS package
+    -- (e.g. apt install clang-format). Mason's tarball mirror can flake.
     "prettier",           -- JS, TS, JSON, YAML, Markdown
     "shfmt",              -- Shell / Zsh
 
     -- Linters
-    "ruff",               -- Python (faster flake8 replacement)
+    -- ruff: install via pipx — same PEP 668 reason as black/isort.
+    --   pipx install ruff
     "golangci-lint",      -- Go
     "shellcheck",         -- Bash / Zsh
     "hadolint",           -- Dockerfile
@@ -75,13 +79,23 @@ require("mason-tool-installer").setup({
 })
 
 -- ── Global LSP defaults ──────────────────────────────────────
--- vim.lsp.config("*") sets a baseline applied to every server before
+-- vim.lsp.config("*") sets capabilities applied to every server before
 -- per-server config is merged. Replaces the old lspconfig[server].setup() loop.
+-- Keymaps are wired via an LspAttach autocmd below — that's the canonical
+-- post-attach hook in Neovim 0.11+; on_attach inside vim.lsp.config("*")
+-- doesn't always fire reliably.
 local handlers = require("user.lsp.handlers")
 
 vim.lsp.config("*", {
-  on_attach    = handlers.on_attach,
   capabilities = handlers.capabilities(),
+})
+
+vim.api.nvim_create_autocmd("LspAttach", {
+  group = vim.api.nvim_create_augroup("user.lsp.attach", { clear = true }),
+  callback = function(args)
+    local client = vim.lsp.get_client_by_id(args.data.client_id)
+    if client then handlers.on_attach(client, args.buf) end
+  end,
 })
 
 -- ── Per-server settings ──────────────────────────────────────
