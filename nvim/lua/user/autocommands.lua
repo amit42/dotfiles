@@ -113,7 +113,6 @@ local function augroup(name)
     pattern = { "markdown", "md" },
     callback = function(ev)
       vim.opt_local.wrap     = true
-      vim.opt_local.spell    = true   -- spell check in markdown
       vim.opt_local.linebreak = true
       -- conceallevel=2 lets markdown renderers hide raw `[ ]` markup
       -- and show their rendered glyphs instead.
