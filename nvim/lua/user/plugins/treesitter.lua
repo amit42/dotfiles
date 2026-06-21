@@ -1,88 +1,41 @@
 -- treesitter.lua
 -- Syntax highlighting and code understanding via AST parsing.
 --
--- Pinned to nvim-treesitter master (v1). The v2 rewrite on the `main` branch
--- isn't stable enough yet — parser registry doesn't populate reliably and
--- textobjects compatibility is in flux. Revisit v2 once it lands a release.
+-- nvim-treesitter v2 (main branch) — required for Neovim 0.12+. The legacy
+-- master (v1) calls node:range() which was removed in 0.12 and breaks every
+-- treesitter parse globally (including render-markdown). v2 also moves the
+-- setup module to the top-level "nvim-treesitter" and drops highlight/indent
+-- opts — Neovim core handles those once parsers are on runtimepath.
+
+local PARSERS = {
+  -- Systems / Embedded
+  "c", "cpp", "cmake", "make",
+  -- Backend
+  "go", "python", "rust", "java", "javascript", "typescript",
+  -- DevOps
+  "dockerfile", "yaml", "json", "hcl", "bash",
+  -- Nvim config
+  "lua", "vim", "vimdoc",
+  -- Markup
+  "markdown", "markdown_inline",
+}
 
 return {
   {
     "nvim-treesitter/nvim-treesitter",
-    branch = "master",
+    branch = "main",
+    lazy   = false,
     build  = ":TSUpdate",
-    lazy   = false,                              -- must be on runtimepath before any buffer opens
-    main   = "nvim-treesitter.configs",          -- v1 setup module
-    dependencies = {
-      "nvim-treesitter/nvim-treesitter-textobjects",
-    },
-    opts = {
+    config = function()
+      require("nvim-treesitter").setup()
+      require("nvim-treesitter").install(PARSERS)
 
-      -- ── Parsers ───────────────────────────────────────────
-      ensure_installed = {
-        -- Systems / Embedded
-        "c", "cpp", "cmake", "make",
-        -- Backend
-        "go", "python", "rust", "java", "javascript", "typescript",
-        -- DevOps
-        "dockerfile", "yaml", "json", "hcl", "bash",
-        -- Nvim config
-        "lua", "vim", "vimdoc",
-        -- Markup
-        "markdown", "markdown_inline",
-      },
-
-      -- Install missing parsers automatically when a new filetype opens
-      auto_install = true,
-
-      -- ── Highlighting ──────────────────────────────────────
-      highlight = {
-        enable = true,
-        additional_vim_regex_highlighting = false,
-      },
-
-      -- ── Indentation ───────────────────────────────────────
-      indent = { enable = true },
-
-      -- ── Text Objects ──────────────────────────────────────
-      textobjects = {
-        select = {
-          enable    = true,
-          lookahead = true,
-          keymaps = {
-            ["af"] = "@function.outer",
-            ["if"] = "@function.inner",
-            ["ac"] = "@class.outer",
-            ["ic"] = "@class.inner",
-            ["aa"] = "@parameter.outer",
-            ["ia"] = "@parameter.inner",
-            ["ab"] = "@block.outer",
-            ["ib"] = "@block.inner",
-          },
-        },
-
-        move = {
-          enable    = true,
-          set_jumps = true,
-          goto_next_start = {
-            ["]f"] = "@function.outer",
-            ["]c"] = "@class.outer",
-          },
-          goto_next_end = {
-            ["]F"] = "@function.outer",
-            ["]C"] = "@class.outer",
-          },
-          goto_previous_start = {
-            ["[f"] = "@function.outer",
-            ["[c"] = "@class.outer",
-          },
-        },
-
-        swap = {
-          enable = true,
-          swap_next     = { ["<leader>sa"] = "@parameter.inner" },
-          swap_previous = { ["<leader>sA"] = "@parameter.inner" },
-        },
-      },
-    },
+      vim.api.nvim_create_autocmd("FileType", {
+        group = vim.api.nvim_create_augroup("user_treesitter_start", { clear = true }),
+        callback = function(ev)
+          pcall(vim.treesitter.start, ev.buf)
+        end,
+      })
+    end,
   },
 }

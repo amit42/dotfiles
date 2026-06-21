@@ -277,6 +277,35 @@ else
 fi
 
 echo ""
+echo "── Treesitter (nvim-treesitter v2 dep) ───────────────"
+# nvim-treesitter v2 (required for Neovim 0.12+) compiles parsers via the
+# tree-sitter CLI — `cc` alone is no longer enough. Homebrew split this out:
+# `tree-sitter` is now just the library; `tree-sitter-cli` is the binary.
+
+if [[ "$OS" == "mac" ]] && check_cmd brew; then
+  # check_cmd tree-sitter-cli would always miss — the binary is `tree-sitter`
+  if check_cmd tree-sitter; then
+    warn "tree-sitter already installed — skipping"
+  else
+    log "Installing tree-sitter-cli..."
+    brew install tree-sitter-cli 2>/dev/null \
+      && success "Installed tree-sitter-cli" \
+      || warn "Failed to install tree-sitter-cli"
+  fi
+elif [[ "$OS" == "linux" ]] || [[ "$OS" == "wsl" ]]; then
+  if check_cmd tree-sitter; then
+    warn "tree-sitter already installed — skipping"
+  elif check_cmd cargo; then
+    log "Installing tree-sitter-cli via cargo..."
+    cargo install tree-sitter-cli 2>/dev/null \
+      && success "Installed tree-sitter-cli" \
+      || warn "Failed to install tree-sitter-cli via cargo"
+  else
+    warn "tree-sitter-cli not installed — install cargo (rustup) then: cargo install tree-sitter-cli"
+  fi
+fi
+
+echo ""
 echo "── Nvim ──────────────────────────────────────────────"
 
 if check_cmd nvim; then
