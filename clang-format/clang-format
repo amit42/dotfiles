@@ -1,0 +1,20 @@
+# ╔═══════════════════════════════════════════════════════╗
+# ║  clang-format — managed via dotfiles                 ║
+# ║  Edit: dotfiles/clang-format/clang-format            ║
+# ║  Deployed to ~/.clang-format by install.sh           ║
+# ╚═══════════════════════════════════════════════════════╝
+#
+# Google style — the most widely adopted modern C++ style.
+# Used by Chromium, TensorFlow, Abseil, Protobuf, gRPC, V8, and most
+# Google-affiliated open-source C++ projects.
+#
+#   2-space indent, 80-col line limit, K&R braces, public:/private:
+#   outdented by 1, sorted #includes, pointer-left ("int* p").
+#
+# Keep this file pure "BasedOnStyle: Google" with zero overrides so
+# the indent that nvim inserts (also 2 via ~/.editorconfig) is exactly
+# what clang-format produces — no whitespace churn on save.
+#
+# Per-project .clang-format in a repo root takes precedence over this one.
+
+BasedOnStyle: Google

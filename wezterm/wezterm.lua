@@ -74,23 +74,31 @@ local function startup_dir()
 end
 config.default_cwd = startup_dir()
 
--- Maximize on launch + prompt to name the first tab. WezTerm has no boolean
--- for maximize; the documented approach is a gui-startup event. We piggyback
--- the prompt onto the same handler so it fires once per fresh window.
+-- Maximize on launch + prompt to name the first tab. Wrapped in pcall so a
+-- failure here (e.g. a deferred prompt firing against a not-yet-realized
+-- window) can't crash WezTerm at startup — worst case the window just
+-- opens without being maximized / without the prompt.
 wezterm.on("gui-startup", function(cmd)
-  local tab, pane, window = wezterm.mux.spawn_window(cmd or {})
-  local gui = window:gui_window()
-  gui:maximize()
-  wezterm.time.call_after(0.15, function()
-    gui:perform_action(act.PromptInputLine({
-      description = "Name first tab (Enter to skip):",
-      action = wezterm.action_callback(function(win, _, line)
-        if line and #line > 0 then
-          win:active_tab():set_title(line)
-        end
-      end),
-    }), pane)
+  local ok, err = pcall(function()
+    local tab, pane, window = wezterm.mux.spawn_window(cmd or {})
+    local gui = window:gui_window()
+    gui:maximize()
+    wezterm.time.call_after(0.15, function()
+      pcall(function()
+        gui:perform_action(act.PromptInputLine({
+          description = "Name first tab (Enter to skip):",
+          action = wezterm.action_callback(function(win, _, line)
+            if line and #line > 0 then
+              win:active_tab():set_title(line)
+            end
+          end),
+        }), pane)
+      end)
+    end)
   end)
+  if not ok then
+    wezterm.log_error("gui-startup failed: " .. tostring(err))
+  end
 end)
 
 -- Tab bar
@@ -160,6 +168,9 @@ local CAP_LEFT  = utf8.char(0xE0B6)
 local CAP_RIGHT = utf8.char(0xE0B4)
 
 wezterm.on("format-tab-title", function(tab, _, _, _, _, _)
+  -- Guard everything: a render error here can break the whole tab bar.
+  -- On any failure, fall back to the plain numbered title.
+  local ok, result = pcall(function()
   local i = (tab.tab_index % #tab_palette_bright) + 1
   local bg   = tab.is_active and tab_palette_bright[i] or tab_palette_dim[i]
   local fg   = tab.is_active and "#1e1e2e" or "#cdd6f4"
@@ -191,7 +202,11 @@ wezterm.on("format-tab-title", function(tab, _, _, _, _, _)
   table.insert(segments, { Text       = CAP_RIGHT })
   -- One bar-coloured space between adjacent pills so they don't touch.
   table.insert(segments, { Text       = " " })
-  return segments
+    return segments
+  end)
+  if ok then return result end
+  -- Fallback: plain numbered title, no styling.
+  return " " .. tostring(tab.tab_index + 1) .. " "
 end)
 
 -- ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -210,7 +225,10 @@ config.scrollback_lines = 10000
 -- ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 -- Default shell: zsh on Mac/Linux, WSL zsh on Windows.
 if wezterm.target_triple:find("windows") then
-  config.default_prog = { "wsl.exe", "~", "-d", "Ubuntu", "--exec", "/bin/zsh", "-l" }
+  -- Canonical wsl.exe arg order: distro, then --cd for the start dir, then
+  -- -e and the command. The old form put a bare "~" before -d which wsl.exe
+  -- mis-parses and can fail to launch (notably on a cold WSL VM).
+  config.default_prog = { "wsl.exe", "-d", "Ubuntu", "--cd", "~", "-e", "/bin/zsh", "-l" }
   -- WSL strips Windows env vars unless they're listed in WSLENV. Without
   -- this the WEZTERM_PANE / WEZTERM_UNIX_SOCKET vars don't reach zsh, so
   -- `wezterm cli ...` (used by the `wtn` rename helper) fails with
@@ -230,7 +248,7 @@ if wezterm.target_triple:find("windows") then
   -- Clink injection + aliases + STARSHIP_CONFIG. Spawning explicit clink
   -- here injected it twice and slowed startup.
   config.launch_menu = {
-    { label = "WSL (zsh)",  args = { "wsl.exe", "~", "-d", "Ubuntu", "--exec", "/bin/zsh", "-l" } },
+    { label = "WSL (zsh)",  args = { "wsl.exe", "-d", "Ubuntu", "--cd", "~", "-e", "/bin/zsh", "-l" } },
     { label = "cmd",        args = { "cmd.exe" } },
     { label = "PowerShell", args = { "pwsh.exe" } },
   }

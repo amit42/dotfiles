@@ -277,6 +277,40 @@ else
 fi
 
 echo ""
+echo "── .editorconfig (global indent/whitespace rules) ────"
+# Single source of truth read by both Neovim and every formatter (black,
+# clang-format, stylua, prettier, gofmt, shfmt, ruff). Per-project files
+# in repo roots take precedence over this one.
+if [[ -f "$DOTFILES/editorconfig/editorconfig" ]]; then
+  if [[ -f "$HOME/.editorconfig" ]]; then
+    warn "Backing up $HOME/.editorconfig → $HOME/.editorconfig.bak"
+    rm -f "$HOME/.editorconfig.bak"
+    mv "$HOME/.editorconfig" "$HOME/.editorconfig.bak"
+  fi
+  cp "$DOTFILES/editorconfig/editorconfig" "$HOME/.editorconfig"
+  success "Copied .editorconfig → $HOME/.editorconfig"
+else
+  warn "dotfiles/editorconfig/editorconfig not found — skipping"
+fi
+
+echo ""
+echo "── clang-format defaults ─────────────────────────────"
+# Deploy ~/.clang-format so standalone C/C++ files outside a project
+# format consistently with nvim's c_settings (4-space indent, 100 cols).
+# Per-project .clang-format files in repo roots take precedence over this.
+if [[ -f "$DOTFILES/clang-format/clang-format" ]]; then
+  if [[ -f "$HOME/.clang-format" ]]; then
+    warn "Backing up $HOME/.clang-format → $HOME/.clang-format.bak"
+    rm -f "$HOME/.clang-format.bak"
+    mv "$HOME/.clang-format" "$HOME/.clang-format.bak"
+  fi
+  cp "$DOTFILES/clang-format/clang-format" "$HOME/.clang-format"
+  success "Copied clang-format → $HOME/.clang-format"
+else
+  warn "dotfiles/clang-format/clang-format not found — skipping"
+fi
+
+echo ""
 echo "── Treesitter (nvim-treesitter v2 dep) ───────────────"
 # nvim-treesitter v2 (required for Neovim 0.12+) compiles parsers via the
 # tree-sitter CLI — `cc` alone is no longer enough. Homebrew split this out:

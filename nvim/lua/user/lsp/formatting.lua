@@ -41,6 +41,19 @@ M.setup_conform = function()
       sh         = { "shfmt" },
     },
 
+    -- Per-formatter overrides
+    formatters = {
+      -- clang-format only auto-searches UP from the file's dir for a
+      -- .clang-format. Files outside ~ (e.g. on /mnt/c) never reach
+      -- ~/.clang-format and silently use the LLVM 2-space default.
+      -- Force-point at the global config so the indent always matches nvim.
+      clang_format = {
+        prepend_args = {
+          "--style=file:" .. vim.fn.expand("~/.clang-format"),
+        },
+      },
+    },
+
     -- Synchronous format on save — 3s timeout to handle goimports/rustfmt cold starts
     -- lsp_fallback = true: if no conform formatter matches, defer to the LSP server
     format_on_save = {

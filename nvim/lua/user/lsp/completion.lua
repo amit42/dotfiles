@@ -64,23 +64,27 @@ cmp.setup({
     -- the wrong word.
     ["<CR>"] = cmp.mapping.confirm({ select = false }),
 
-    -- Tab: cycle to NEXT item in the menu. If inside a snippet, jump to the
-    -- next placeholder instead. Confirm with <CR>.
+    -- Tab behaviour:
+    --   Completion menu visible       → cycle to NEXT item
+    --   Inside a snippet placeholder  → jump to NEXT placeholder (Select mode only)
+    --   Otherwise                     → insert a literal tab
+    -- The Select-mode guard means typing Tab while normally editing always
+    -- inserts a tab — it only navigates snippet placeholders when you're
+    -- actively sitting on one.
     ["<Tab>"] = cmp.mapping(function(fallback)
       if cmp.visible() then
         cmp.select_next_item()
-      elseif luasnip.expand_or_jumpable() then
-        luasnip.expand_or_jump()
+      elseif vim.fn.mode() == "s" and luasnip.jumpable(1) then
+        luasnip.jump(1)
       else
         fallback()
       end
     end, { "i", "s" }),
 
-    -- Shift-Tab: cycle to PREVIOUS item; or jump back through snippet placeholders.
     ["<S-Tab>"] = cmp.mapping(function(fallback)
       if cmp.visible() then
         cmp.select_prev_item()
-      elseif luasnip.jumpable(-1) then
+      elseif vim.fn.mode() == "s" and luasnip.jumpable(-1) then
         luasnip.jump(-1)
       else
         fallback()

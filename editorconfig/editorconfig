@@ -1,0 +1,70 @@
+# ╔═══════════════════════════════════════════════════════╗
+# ║  .editorconfig — managed via dotfiles                ║
+# ║  Edit: dotfiles/editorconfig/editorconfig            ║
+# ║  Deployed to ~/.editorconfig by install.sh           ║
+# ╚═══════════════════════════════════════════════════════╝
+#
+# Single source of truth for tab/space + line-ending settings, read by
+# both Neovim (built-in since 0.9) and every formatter you use (black,
+# clang-format, stylua, prettier, gofmt, shfmt, ruff). When this file
+# matches what the formatter does, saving never changes whitespace.
+#
+# Per-project .editorconfig in a repo root TAKES PRECEDENCE over this one,
+# so projects with their own style aren't disturbed.
+
+# Stop the editorconfig search here so user's home is the boundary.
+root = true
+
+# ── Default fallback (every file) ────────────────────────
+[*]
+charset                  = utf-8
+end_of_line              = lf
+insert_final_newline     = true
+trim_trailing_whitespace = true
+indent_style             = space
+indent_size              = 2
+
+# ── Python (black + isort + ruff) ────────────────────────
+[*.py]
+indent_size = 4
+max_line_length = 88                # black's default
+
+# ── C / C++ (clang-format, Google style) ─────────────────
+[*.{c,h,cpp,hpp,cc,cxx}]
+indent_size     = 2
+max_line_length = 80
+
+# ── Go (gofmt — tabs, 4-wide display) ────────────────────
+[*.go]
+indent_style = tab
+indent_size  = 4
+
+# ── Rust (rustfmt — 4 spaces) ────────────────────────────
+[*.rs]
+indent_size = 4
+max_line_length = 100
+
+# ── Java (google-java-format — 4 spaces) ─────────────────
+[*.java]
+indent_size = 4
+max_line_length = 100
+
+# ── Lua (stylua) ─────────────────────────────────────────
+[*.lua]
+indent_size = 2
+
+# ── Shell scripts (shfmt) ────────────────────────────────
+[*.{sh,bash,zsh}]
+indent_size = 2
+
+# ── Web (prettier) ───────────────────────────────────────
+[*.{js,ts,jsx,tsx,mjs,cjs,vue,svelte,css,scss,html,json,yaml,yml,md,mdx}]
+indent_size = 2
+
+# ── Makefiles MUST use real tabs ────────────────────────
+[{Makefile,makefile,*.mk}]
+indent_style = tab
+
+# ── Windows batch — CRLF line endings ────────────────────
+[*.{cmd,bat,ps1}]
+end_of_line = crlf

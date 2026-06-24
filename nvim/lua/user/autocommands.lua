@@ -66,15 +66,10 @@ local function augroup(name)
   -- Override settings for specific file types
   -- Because different languages have different conventions
   
-  -- C/C++ — embedded code uses 4 spaces typically
-  vim.api.nvim_create_autocmd("FileType", {
-    group = augroup("c_settings"),
-    pattern = { "c", "cpp" },
-    callback = function()
-      vim.opt_local.tabstop    = 4
-      vim.opt_local.shiftwidth = 4
-    end,
-  })
+  -- C/C++ indent is driven by ~/.editorconfig (2-space, matches Google
+  -- style in ~/.clang-format). The old hard-coded c_settings autocmd was
+  -- removed because it overrode editorconfig and caused save-time
+  -- whitespace churn vs the formatter.
   
   -- Go — uses tabs not spaces (gofmt standard)
   vim.api.nvim_create_autocmd("FileType", {

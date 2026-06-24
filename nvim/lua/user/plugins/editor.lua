@@ -514,7 +514,34 @@ return {
         require("persistence").setup({
           dir     = vim.fn.stdpath("state") .. "/sessions/",
           options = { "buffers", "curdir", "tabpages", "winsize" },
+          -- Default `need = 1` skips the autosave when no real file
+          -- buffers are open. Setting to 0 means every save attempt
+          -- writes — including "empty" — so the on-disk session can't
+          -- get stuck on a stale state.
+          need = 0,
         })
+
+        -- Save the session on common state changes too, not just on
+        -- VimLeavePre. VimLeavePre never fires when the laptop sleeps,
+        -- crashes, loses power, or nvim is SIGKILL'd — so a clean-quit-
+        -- only save can leave the on-disk session badly out of date.
+        -- Throttled to 2s so rapid events don't thrash the disk.
+        local save_pending = false
+        local function schedule_save()
+          if save_pending then return end
+          save_pending = true
+          vim.defer_fn(function()
+            save_pending = false
+            pcall(function() require("persistence").save() end)
+          end, 2000)
+        end
+        vim.api.nvim_create_autocmd(
+          { "BufWritePost", "BufAdd", "BufDelete", "FocusLost" },
+          {
+            group    = vim.api.nvim_create_augroup("persistence_extra_save", { clear = true }),
+            callback = schedule_save,
+          }
+        )
 
         -- Auto-restore on bare `nvim` (no file args). Runs before the
         -- dashboard's deferred VimEnter check (100ms), so if a session
