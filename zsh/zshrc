@@ -1584,6 +1584,10 @@ pdf() {
 
 
 if command -v claude &>/dev/null; then
+  # aic — resume this directory's most recent Claude conversation
+  # (interactive). Falls back to a fresh session if there's none yet.
+  aic() { claude --continue "$@" || claude "$@"; }
+
   ai()  { claude -p "$*"; }
   # aiy — same as ai, but with --dangerously-skip-permissions so the
   # one-shot can read/write files and run commands without prompting.

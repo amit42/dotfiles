@@ -139,6 +139,10 @@ keymap("t", "<C-j>", "<C-\\><C-N><C-w>j", term_opts)
 keymap("t", "<C-k>", "<C-\\><C-N><C-w>k", term_opts)
 keymap("t", "<C-l>", "<C-\\><C-N><C-w>l", term_opts)
 
+-- Ctrl+q hides the terminal window (job keeps running — reopen to resume).
+-- Works in any terminal: claude float (<leader>ac), scratch term (C-\), etc.
+keymap("t", "<C-q>", "<C-\\><C-N>:close<CR>", term_opts)
+
 
 -- Lazy lua
 keymap("n", "<leader>l", ":Lazy<CR>", opts)
