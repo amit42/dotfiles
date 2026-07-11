@@ -458,6 +458,11 @@ dotup() {
   git -C "$d" pull && bash "$d/install.sh" && source ~/.zshrc
 }
 
+# dotdoctor — health check: tools present, nvim parsers, plugin managers,
+# version pinning, and drift between the repo and deployed configs.
+# Usage: dotdoctor
+alias dotdoctor='bash ~/Desktop/dotfiles/dotfiles/doctor.sh'
+
 # Auto-list after cd — runs `ls` every time you change directory.
 # Uses the ls alias (eza with icons if installed) so the listing
 # is always styled. Defined via add-zsh-hook so it stacks cleanly
@@ -1619,6 +1624,19 @@ if command -v claude &>/dev/null; then
   # aime-reset — start aime's session over (forgets prior conversation).
   aime-reset() {
     rm -f "$HOME/.cache/aime-session" && echo "aime session reset."
+  }
+
+  # aidiff — pipe a git diff into Claude for a quick code review.
+  #   aidiff              → review unstaged changes
+  #   aidiff --staged     → review what's about to be committed
+  #   aidiff main...HEAD  → review a branch
+  # Read-only (no tools) — it only sees the diff text you pipe in.
+  aidiff() {
+    local diff
+    diff=$(git diff --no-ext-diff "$@") || return 1
+    [[ -z "$diff" ]] && { echo "No diff to review." >&2; return 1; }
+    printf '%s\n' "$diff" | claude -p \
+      "Review this git diff. Point out bugs, risky changes, and anything unclear. Be concise; skip praise."
   }
 fi
 

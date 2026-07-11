@@ -346,6 +346,18 @@ if check_cmd nvim; then
   # Copy our entire nvim/ folder to ~/.config/nvim
   # nvim always looks here — no extra source line needed
   safe_copy "$DOTFILES/nvim" "$CONFIG/nvim"
+
+  # Pin plugins to the committed lockfile. `Lazy! restore` checks out the
+  # exact commit of every plugin recorded in lazy-lock.json — this is what
+  # makes a fresh machine byte-identical to the one that committed it.
+  if [[ -f "$CONFIG/nvim/lazy-lock.json" ]]; then
+    log "Restoring plugin versions from lazy-lock.json..."
+    if nvim --headless "+Lazy! restore" +qa 2>/dev/null; then
+      success "Plugins pinned to lockfile"
+    else
+      warn "Lazy restore reported errors — open nvim and run :Lazy restore"
+    fi
+  fi
 else
   warn "nvim not installed — skipping nvim config"
   warn "Install nvim then re-run this script"

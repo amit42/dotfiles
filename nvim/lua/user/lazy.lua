@@ -41,6 +41,7 @@ require("lazy").setup({
     { import = "user.plugins.ui" },          -- colors, statusline, icons
     { import = "user.plugins.editor" },      -- telescope, autopairs, etc
     { import = "user.plugins.treesitter" },  -- syntax highlighting
+    { import = "user.plugins.dap" },         -- debugger (breakpoints, stepping)
     { import = "user.lsp.init" },            -- LSP, completion, formatting
   },
 

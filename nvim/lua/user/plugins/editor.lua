@@ -8,7 +8,8 @@ return {
     -- files, text, git commits, buffers, keymaps, etc
     {
       "nvim-telescope/telescope.nvim",
-      tag = "v0.2.2",  -- latest stable; includes standalone treesitter implementation
+      tag   = "v0.2.2",  -- latest stable; includes standalone treesitter implementation
+      event = "VeryLazy",  -- defer past first paint; dashboard opens at VimEnter+100ms, well after
       dependencies = {
         "nvim-lua/plenary.nvim",          -- utility functions, required by many plugins
         "DrKJeff16/project.nvim",        -- project detection, enables Telescope projects
@@ -191,6 +192,7 @@ return {
     -- Space+n toggles the sidebar, Space+e opens telescope file browser
     {
       "nvim-tree/nvim-tree.lua",
+      event = "VeryLazy",  -- loads right after UI paint — before the deferred dashboard autocmd needs NvimTreeClose
       dependencies = {
         "nvim-tree/nvim-web-devicons",
       },
@@ -555,6 +557,21 @@ return {
       -- event = "VeryLazy" would be too late — needs to register roots before
       -- telescope picker is opened, so load immediately but it's very fast
       config = function()
+        -- Self-heal: project.nvim writes project_history.json on every
+        -- BufDelete with no file locking. Two concurrent nvim instances race
+        -- and corrupt the JSON, then the plugin hard-errors at history.lua:619
+        -- on every buffer close until the file is deleted by hand. Reset it
+        -- at startup if it fails to parse — cheap, and the recent-project
+        -- list rebuilds itself as you open projects.
+        local hist = vim.fn.stdpath("data") .. "/project_nvim/project_history.json"
+        if vim.fn.filereadable(hist) == 1 then
+          local ok = pcall(vim.json.decode, table.concat(vim.fn.readfile(hist), "\n"))
+          if not ok then
+            vim.notify("project.nvim: history JSON was corrupt, resetting", vim.log.levels.WARN)
+            vim.fn.writefile({ "[]" }, hist)
+          end
+        end
+
         require("project").setup({
           -- lsp.enabled=true tries LSP root first, falls back to pattern search
           lsp      = { enabled = true },
@@ -650,6 +667,7 @@ return {
     {
       "akinsho/toggleterm.nvim",
       version = "*",
+      event   = "VeryLazy",              -- defer past first paint; open_mapping registers on load
       config = function()
         require("toggleterm").setup({
           size = 15,                     -- height of terminal
@@ -660,6 +678,24 @@ return {
             border = "curved",
           },
         })
+
+        -- ── Claude Code terminal ──────────────────────────────
+        -- <leader>ac toggles a dedicated floating claude session (separate
+        -- from the C-\ scratch terminal, so both can coexist). The session
+        -- persists across toggles — hide it, keep the conversation.
+        local Terminal = require("toggleterm.terminal").Terminal
+        local claude = Terminal:new({
+          cmd        = "claude",
+          direction  = "float",
+          hidden     = true,             -- not part of the C-\ rotation
+          float_opts = { border = "curved", width = function() return math.floor(vim.o.columns * 0.85) end },
+          on_open    = function(term)
+            vim.keymap.set("t", "<C-q>", [[<C-\><C-n>:close<CR>]],
+              { buffer = term.bufnr, silent = true, desc = "Hide claude terminal" })
+          end,
+        })
+        vim.keymap.set("n", "<leader>ac", function() claude:toggle() end,
+          { noremap = true, silent = true, desc = "Toggle Claude Code" })
       end,
     },
 
@@ -701,7 +737,9 @@ return {
     -- against the newer TSMatch API on nvim 0.12 + nvim-treesitter v1 master.)
     {
       "MeanderingProgrammer/render-markdown.nvim",
-      lazy         = false,                       -- eager load so its FileType autocmd is registered before any buffer (including session-restored ones) opens
+      -- ft-lazy: lazy.nvim registers its own FileType trigger at startup,
+      -- so even session-restored markdown buffers load the plugin on open.
+      ft           = { "markdown" },
       dependencies = { "nvim-treesitter/nvim-treesitter", "nvim-tree/nvim-web-devicons" },
       opts = {
         heading    = { enabled = true },
@@ -739,6 +777,56 @@ return {
         max_width_window_percentage  = 80,
         max_height_window_percentage = 50,
         window_overlap_clear_enabled = true,      -- redraw when another window overlaps
+      },
+    },
+
+    -- ── Flash — jump anywhere on screen ───────────────────────
+    -- Press s + 2 chars → labels appear on every match → one more key lands
+    -- the cursor there. S uses treesitter nodes for structural selection.
+    -- (S stays visual-mode-free: nvim-surround owns S in visual for
+    -- "surround selection".)
+    {
+      "folke/flash.nvim",
+      event = "VeryLazy",
+      opts  = {
+        modes = {
+          -- Don't hijack f/t/F/T or / search — only explicit s/S jumps
+          char   = { enabled = false },
+          search = { enabled = false },
+        },
+      },
+      keys = {
+        { "s", mode = { "n", "x", "o" }, function() require("flash").jump() end,       desc = "Flash jump" },
+        { "S", mode = { "n", "o" },      function() require("flash").treesitter() end, desc = "Flash treesitter select" },
+        { "r", mode = "o",               function() require("flash").remote() end,     desc = "Remote flash (operator)" },
+      },
+    },
+
+    -- ── TODO comments ─────────────────────────────────────────
+    -- Highlights TODO/FIXME/HACK/NOTE/PERF in code and makes them jumpable
+    -- and searchable.
+    {
+      "folke/todo-comments.nvim",
+      event = { "BufReadPost", "BufNewFile" },
+      dependencies = { "nvim-lua/plenary.nvim" },
+      opts = {},
+      keys = {
+        { "]t",         function() require("todo-comments").jump_next() end, desc = "Next TODO" },
+        { "[t",         function() require("todo-comments").jump_prev() end, desc = "Prev TODO" },
+        { "<leader>tt", ":TodoTelescope<CR>",                                desc = "Search TODOs" },
+      },
+    },
+
+    -- ── Smooth scrolling ──────────────────────────────────────
+    -- Ctrl-d/u/f/b and zz/zt/zb glide instead of jumping — easier to keep
+    -- visual context while moving.
+    {
+      "karb94/neoscroll.nvim",
+      event = "VeryLazy",
+      opts  = {
+        mappings  = { "<C-u>", "<C-d>", "<C-b>", "<C-f>", "zt", "zz", "zb" },
+        duration_multiplier = 0.7,   -- snappier than default
+        easing    = "quadratic",
       },
     },
 
