@@ -109,6 +109,17 @@ return {
             selection_caret = " ",
             entry_prefix   = " ",          -- must match selection_caret width
             path_display   = { "truncate" }, -- paths relative to cwd, no ../ artifacts
+            -- Huge-repo ergonomics (ClickHouse-scale, ~65k files):
+            -- debounce coalesces keystrokes so live_grep doesn't re-spawn rg
+            -- on every character; --max-columns skips pathological lines
+            -- (minified/generated) that make ingest slow; --trim drops
+            -- leading whitespace so C++ results aren't half indentation.
+            debounce = 100,
+            vimgrep_arguments = {
+              "rg", "--color=never", "--no-heading", "--with-filename",
+              "--line-number", "--column", "--smart-case",
+              "--trim", "--max-columns=240",
+            },
             file_ignore_patterns = {
               "node_modules",
               ".git/",
@@ -166,6 +177,9 @@ return {
         -- Search
         map("n", "<leader>tg", builtin.live_grep,    opts)
         map("n", "<leader>tw", builtin.grep_string,  opts)
+        -- Reopen the previous picker with its results intact — no re-search.
+        -- In huge repos this is the difference between instant and seconds.
+        map("n", "<leader>t.", builtin.resume,       opts)
 
         -- Buffers / Navigation
         map("n", "<leader>tb", builtin.buffers,                opts)
