@@ -545,6 +545,17 @@ else
 fi
 
 # ══════════════════════════════════════════════════════════
+# APPLY THEME TO LIVE PROCESSES
+# ══════════════════════════════════════════════════════════
+# tmux can be re-themed in place; wezterm auto-reloads when its config
+# file is rewritten (which this script just did). Ghostty has no external
+# reload — hint the keybind. nvim picks the theme up on next launch.
+if command -v tmux &>/dev/null && tmux has-session 2>/dev/null; then
+  tmux source-file "$CONFIG/tmux/tmux.conf" 2>/dev/null \
+    && success "Live tmux sessions re-themed"
+fi
+
+# ══════════════════════════════════════════════════════════
 # DONE
 # ══════════════════════════════════════════════════════════
 echo ""
@@ -562,5 +573,10 @@ echo "  Next steps:"
 echo "  1. source ~/.zshrc"
 echo "  2. Open tmux → press Prefix+I to install plugins"
 echo "  3. Install JetBrainsMono Nerd Font on host machine"
+echo ""
+echo "  After a theme switch:"
+echo "  - ghostty: press super+r (or Cmd+Shift+,) to reload in place"
+echo "  - wezterm: auto-reloads; tmux: re-themed live above"
+echo "  - nvim + new shells: pick it up on next launch"
 echo "═══════════════════════════════════════════════════════"
 
