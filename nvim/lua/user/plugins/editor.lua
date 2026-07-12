@@ -177,6 +177,8 @@ return {
         -- Search
         map("n", "<leader>tg", builtin.live_grep,    opts)
         map("n", "<leader>tw", builtin.grep_string,  opts)
+        -- Fuzzy search within the current buffer (typo-tolerant, unlike /)
+        map("n", "<leader>t/", builtin.current_buffer_fuzzy_find, opts)
         -- Reopen the previous picker with its results intact — no re-search.
         -- In huge repos this is the difference between instant and seconds.
         map("n", "<leader>t.", builtin.resume,       opts)
