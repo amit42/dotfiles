@@ -15,6 +15,10 @@ local THEMES = {
   ["gruvbox"]          = "gruvbox",
   ["kanagawa"]         = "kanagawa-wave",
   ["rose-pine"]        = "rose-pine",
+  ["nord"]             = "nord",
+  ["dracula"]          = "dracula",
+  ["everforest"]       = "everforest",
+  ["onedark"]          = "onedark",
 }
 
 local function dotfiles_theme()
@@ -111,6 +115,38 @@ return {
       config = function()
         require("rose-pine").setup({ variant = "main" })
         vim.cmd.colorscheme("rose-pine")
+      end,
+    }),
+
+    theme_spec("nord", {
+      "gbprod/nord.nvim",
+      config = function()
+        require("nord").setup({})
+        vim.cmd.colorscheme("nord")
+      end,
+    }),
+
+    theme_spec("dracula", {
+      "Mofiqul/dracula.nvim",
+      config = function()
+        require("dracula").setup({})
+        vim.cmd.colorscheme("dracula")
+      end,
+    }),
+
+    theme_spec("everforest", {
+      "neanias/everforest-nvim",
+      config = function()
+        require("everforest").setup({ background = "hard" })
+        vim.cmd.colorscheme("everforest")
+      end,
+    }),
+
+    theme_spec("onedark", {
+      "navarasu/onedark.nvim",
+      config = function()
+        require("onedark").setup({ style = "dark" })
+        require("onedark").load()
       end,
     }),
   

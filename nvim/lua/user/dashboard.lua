@@ -145,6 +145,14 @@ local DASH_PALETTES = {
     grad = { "#7e9cd8", "#7aa89f", "#98bb6c", "#957fb8", "#d27e99", "#ffa066" } },
   ["rose-pine"] = { accent = "#c4a7e7", key = "#f6c177", div = "#403d52",
     grad = { "#31748f", "#9ccfd8", "#ebbcba", "#c4a7e7", "#eb6f92", "#f6c177" } },
+  ["nord"] = { accent = "#88c0d0", key = "#d08770", div = "#4c566a",
+    grad = { "#5e81ac", "#81a1c1", "#88c0d0", "#8fbcbb", "#b48ead", "#d08770" } },
+  ["dracula"] = { accent = "#bd93f9", key = "#ffb86c", div = "#44475a",
+    grad = { "#8be9fd", "#50fa7b", "#bd93f9", "#ff79c6", "#ff5555", "#ffb86c" } },
+  ["everforest"] = { accent = "#a7c080", key = "#e69875", div = "#475258",
+    grad = { "#7fbbb3", "#83c092", "#a7c080", "#dbbc7f", "#d699b6", "#e67e80" } },
+  ["onedark"] = { accent = "#61afef", key = "#d19a66", div = "#3e4451",
+    grad = { "#56b6c2", "#61afef", "#c678dd", "#98c379", "#e5c07b", "#e06c75" } },
 }
 
 local function dash_palette()

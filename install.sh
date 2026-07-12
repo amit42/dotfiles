@@ -31,7 +31,7 @@ log "Dotfiles source : $DOTFILES"
 # The choice persists in ~/.config/dotfiles-theme; nvim and wezterm read
 # that file directly at startup, tmux/ghostty/starship get their theme
 # materialized below.
-VALID_THEMES="catppuccin-mocha tokyonight gruvbox kanagawa rose-pine"
+VALID_THEMES="catppuccin-mocha tokyonight gruvbox kanagawa rose-pine nord dracula everforest onedark"
 THEME_FILE="$HOME/.config/dotfiles-theme"
 THEME="catppuccin-mocha"
 [[ -f "$THEME_FILE" ]] && THEME="$(head -1 "$THEME_FILE" | tr -d '[:space:]')"

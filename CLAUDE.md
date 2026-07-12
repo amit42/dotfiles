@@ -6,7 +6,8 @@ WezTerm, Ghostty, plus a Windows cmd/clink setup.
 ## Theming
 
 One theme drives everything: `bash install.sh --theme <name>` with
-catppuccin-mocha (default), tokyonight, gruvbox, kanagawa, rose-pine.
+catppuccin-mocha (default), tokyonight, gruvbox, kanagawa, rose-pine,
+nord, dracula, everforest, onedark (`--list-themes` shows them).
 The choice persists in `~/.config/dotfiles-theme`.
 - nvim (`plugins/ui.lua`, `dashboard.lua`) and wezterm READ that file at
   startup — never generate/sed their configs, it would break drift checks.
