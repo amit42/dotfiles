@@ -129,20 +129,43 @@ local BLOCK_W = COL_W * NCOLS + GAP * (NCOLS - 1)  -- 119
 local DIV   = "\xe2\x94\x82"
 local DIV_B = #DIV  -- 3
 
--- ── Colours (catppuccin-mocha) ────────────────────────────────────────
+-- ── Colours (per-theme) ───────────────────────────────────────────────
+-- Reads ~/.config/dotfiles-theme like ui.lua does. Each entry: accent
+-- (title/sections), key, divider, then a 6-step logo gradient
+-- cool → warm within that theme's palette.
+
+local DASH_PALETTES = {
+  ["catppuccin-mocha"] = { accent = "#cba6f7", key = "#fab387", div = "#45475a",
+    grad = { "#89b4fa", "#74c7ec", "#89dceb", "#cba6f7", "#f5c2e7", "#f5e0dc" } },
+  ["tokyonight"] = { accent = "#bb9af7", key = "#ff9e64", div = "#3b4261",
+    grad = { "#7aa2f7", "#7dcfff", "#2ac3de", "#bb9af7", "#c53b53", "#ff9e64" } },
+  ["gruvbox"] = { accent = "#d3869b", key = "#fe8019", div = "#504945",
+    grad = { "#83a598", "#8ec07c", "#b8bb26", "#d3869b", "#fb4934", "#fe8019" } },
+  ["kanagawa"] = { accent = "#957fb8", key = "#ffa066", div = "#2a2a37",
+    grad = { "#7e9cd8", "#7aa89f", "#98bb6c", "#957fb8", "#d27e99", "#ffa066" } },
+  ["rose-pine"] = { accent = "#c4a7e7", key = "#f6c177", div = "#403d52",
+    grad = { "#31748f", "#9ccfd8", "#ebbcba", "#c4a7e7", "#eb6f92", "#f6c177" } },
+}
+
+local function dash_palette()
+  local f = io.open(vim.fn.expand("~/.config/dotfiles-theme"), "r")
+  local name = "catppuccin-mocha"
+  if f then
+    name = (f:read("*l") or ""):gsub("%s+$", "")
+    f:close()
+  end
+  return DASH_PALETTES[name] or DASH_PALETTES["catppuccin-mocha"]
+end
 
 local function setup_hl()
-  vim.api.nvim_set_hl(0, "DashTitle",   { fg = "#cba6f7" })
-  vim.api.nvim_set_hl(0, "DashSection", { fg = "#cba6f7", bold = true })
-  vim.api.nvim_set_hl(0, "DashKey",     { fg = "#fab387" })
-  vim.api.nvim_set_hl(0, "DashColDiv",  { fg = "#45475a" })
-  -- Logo gradient: blue → sapphire → sky → mauve → pink → rosewater
-  vim.api.nvim_set_hl(0, "DashGrad1",   { fg = "#89b4fa" })
-  vim.api.nvim_set_hl(0, "DashGrad2",   { fg = "#74c7ec" })
-  vim.api.nvim_set_hl(0, "DashGrad3",   { fg = "#89dceb" })
-  vim.api.nvim_set_hl(0, "DashGrad4",   { fg = "#cba6f7" })
-  vim.api.nvim_set_hl(0, "DashGrad5",   { fg = "#f5c2e7" })
-  vim.api.nvim_set_hl(0, "DashGrad6",   { fg = "#f5e0dc" })
+  local P = dash_palette()
+  vim.api.nvim_set_hl(0, "DashTitle",   { fg = P.accent })
+  vim.api.nvim_set_hl(0, "DashSection", { fg = P.accent, bold = true })
+  vim.api.nvim_set_hl(0, "DashKey",     { fg = P.key })
+  vim.api.nvim_set_hl(0, "DashColDiv",  { fg = P.div })
+  for i, hex in ipairs(P.grad) do
+    vim.api.nvim_set_hl(0, "DashGrad" .. i, { fg = hex })
+  end
 end
 
 -- ── Helpers ──────────────────────────────────────────────────────────

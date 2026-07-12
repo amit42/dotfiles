@@ -20,15 +20,11 @@ font-feature = -liga
 # Smoother text rendering (Ghostty does this by default; explicit for clarity)
 font-thicken = true
 
-# ── Theme — Catppuccin Mocha ─────────────────────────────
-# Same palette as nvim + tmux + starship + wezterm.
-theme = Catppuccin Mocha
-
-# Explicit cursor + selection colors (match WezTerm catppuccin) so highlights
-# look identical across terminals.
-cursor-color           = #cba6f7
-selection-background   = #45475a
-selection-foreground   = #cdd6f4
+# ── Theme ────────────────────────────────────────────────
+# Theme (+ cursor/selection colors) lives in a separate snippet that
+# install.sh deploys from ghostty/themes/<name>.conf.
+# Switch: bash install.sh --theme <name>  (default: catppuccin-mocha)
+config-file = theme-dotfiles.conf
 
 # ── Startup directory ────────────────────────────────────
 # Open new surfaces in ~/Desktop. zshrc handles the WSL→Windows path swap.

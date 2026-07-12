@@ -24,6 +24,33 @@ error()   { echo -e "${RED}✗${NC} $1"; exit 1; }
 DOTFILES="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 log "Dotfiles source : $DOTFILES"
 
+# ── Theme ──────────────────────────────────────────────────
+# One theme name drives nvim, tmux, starship, wezterm, and ghostty.
+#   bash install.sh --theme tokyonight     switch theme + deploy
+#   bash install.sh                        keep the persisted choice
+# The choice persists in ~/.config/dotfiles-theme; nvim and wezterm read
+# that file directly at startup, tmux/ghostty/starship get their theme
+# materialized below.
+VALID_THEMES="catppuccin-mocha tokyonight gruvbox kanagawa rose-pine"
+THEME_FILE="$HOME/.config/dotfiles-theme"
+THEME="catppuccin-mocha"
+[[ -f "$THEME_FILE" ]] && THEME="$(head -1 "$THEME_FILE" | tr -d '[:space:]')"
+
+while [[ $# -gt 0 ]]; do
+  case "$1" in
+    --theme)   THEME="$2"; shift 2 ;;
+    --theme=*) THEME="${1#--theme=}"; shift ;;
+    *) warn "Unknown argument: $1 (supported: --theme <name>)"; shift ;;
+  esac
+done
+
+if ! grep -qw "$THEME" <<< "$VALID_THEMES"; then
+  error "Unknown theme '$THEME' — valid: $VALID_THEMES"
+fi
+mkdir -p "$(dirname "$THEME_FILE")"
+echo "$THEME" > "$THEME_FILE"
+log "Theme           : $THEME"
+
 # ── Detect OS ──────────────────────────────────────────────
 OS="unknown"
 if [[ "$OSTYPE" == "darwin"* ]]; then
@@ -408,9 +435,15 @@ echo "── Zsh ─────────────────────
 if check_cmd zsh; then
   safe_copy "$DOTFILES/zsh/zshrc" "$CONFIG/zsh/zshrc"
 
-  # starship config — starship reads ~/.config/starship.toml automatically
+  # starship config — starship reads ~/.config/starship.toml automatically.
+  # After copying, point the palette line at the active theme (all palettes
+  # ship in the same file; only this one line selects). sed -i.bak + rm is
+  # the portable in-place idiom (BSD sed vs GNU sed).
   if [[ -f "$DOTFILES/zsh/starship.toml" ]]; then
     safe_copy "$DOTFILES/zsh/starship.toml" "$CONFIG/starship.toml"
+    sed -i.sedbak "s/^palette = \".*\"/palette = \"$THEME\"/" "$CONFIG/starship.toml" \
+      && rm -f "$CONFIG/starship.toml.sedbak" \
+      && success "Starship palette → $THEME"
   fi
 
   append_if_missing "$HOME/.zshrc" "source $CONFIG/zsh/zshrc"
@@ -446,6 +479,14 @@ if check_cmd tmux; then
 
   safe_copy "$DOTFILES/tmux/tmux.conf" "$CONFIG/tmux/tmux.conf"
   append_if_missing "$HOME/.tmux.conf" "source $CONFIG/tmux/tmux.conf"
+
+  # Status-bar colors live in a per-theme file sourced by tmux.conf
+  if [[ -f "$DOTFILES/tmux/themes/$THEME.conf" ]]; then
+    cp "$DOTFILES/tmux/themes/$THEME.conf" "$CONFIG/tmux/theme.conf"
+    success "Tmux theme → $THEME"
+  else
+    warn "tmux/themes/$THEME.conf not found — status bar colors missing"
+  fi
 
   success "Tmux ready — open tmux and press Prefix+I to install plugins"
 else
@@ -483,11 +524,21 @@ fi
 
 # Ghostty: macOS app reads from ~/Library/Application Support/com.mitchellh.ghostty/
 # Linux/other reads from ~/.config/ghostty/config
+# The main config includes theme-dotfiles.conf (same dir), deployed from
+# ghostty/themes/<theme>.conf.
 if [[ -f "$DOTFILES/ghostty/config" ]]; then
   if [[ "$OS" == "mac" ]]; then
-    safe_copy "$DOTFILES/ghostty/config" "$HOME/Library/Application Support/com.mitchellh.ghostty/config.ghostty"
+    GHOSTTY_DIR="$HOME/Library/Application Support/com.mitchellh.ghostty"
+    safe_copy "$DOTFILES/ghostty/config" "$GHOSTTY_DIR/config.ghostty"
   else
-    safe_copy "$DOTFILES/ghostty/config" "$CONFIG/ghostty/config"
+    GHOSTTY_DIR="$CONFIG/ghostty"
+    safe_copy "$DOTFILES/ghostty/config" "$GHOSTTY_DIR/config"
+  fi
+  if [[ -f "$DOTFILES/ghostty/themes/$THEME.conf" ]]; then
+    cp "$DOTFILES/ghostty/themes/$THEME.conf" "$GHOSTTY_DIR/theme-dotfiles.conf"
+    success "Ghostty theme → $THEME"
+  else
+    warn "ghostty/themes/$THEME.conf not found — theme include will be empty"
   fi
 else
   warn "dotfiles/ghostty/config not found — skipping"
@@ -500,6 +551,7 @@ echo ""
 echo "═══════════════════════════════════════════════════════"
 success "Install complete"
 echo ""
+echo "  Theme     → $THEME   (switch: bash install.sh --theme <name>)"
 echo "  Nvim      → $CONFIG/nvim"
 echo "  Zsh       → $CONFIG/zsh/zshrc"
 echo "  Tmux      → $CONFIG/tmux/tmux.conf"

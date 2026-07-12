@@ -3,6 +3,41 @@
 -- Each plugin is a table with at minimum a github "owner/repo" string
 -- lazy.nvim reads these and installs/loads them
 
+-- ── Theme selection ───────────────────────────────────────
+-- The active theme name lives in ~/.config/dotfiles-theme (one line),
+-- written by `bash install.sh --theme <name>`. Reading it here keeps the
+-- deployed config byte-identical to the repo (no drift). All theme
+-- plugins stay installed (they're in the lockfile); only the active one
+-- loads at startup, so switching costs nothing.
+local THEMES = {
+  ["catppuccin-mocha"] = "catppuccin",
+  ["tokyonight"]       = "tokyonight-night",
+  ["gruvbox"]          = "gruvbox",
+  ["kanagawa"]         = "kanagawa-wave",
+  ["rose-pine"]        = "rose-pine",
+}
+
+local function dotfiles_theme()
+  local f = io.open(vim.fn.expand("~/.config/dotfiles-theme"), "r")
+  if not f then return "catppuccin-mocha" end
+  local name = (f:read("*l") or ""):gsub("%s+$", "")
+  f:close()
+  return THEMES[name] and name or "catppuccin-mocha"
+end
+
+local THEME       = dotfiles_theme()
+local COLORSCHEME = THEMES[THEME]
+
+-- Shared by every theme plugin spec: only the active theme loads eagerly
+-- (colorschemes must load before other plugins or highlights break).
+local function theme_spec(key, spec)
+  local active = (key == THEME)
+  spec.lazy     = not active
+  spec.priority = active and 1000 or nil
+  if not active then spec.config = nil end   -- don't run setup for inactive themes
+  return spec
+end
+
 return {
 
     -- ── Icons ───────────────────────────────────────────────
@@ -13,16 +48,13 @@ return {
       "nvim-tree/nvim-web-devicons",
       lazy = true,   -- don't load until another plugin needs it
     },
-  
-    -- ── Colorscheme ─────────────────────────────────────────
-    -- Catppuccin — modern, well maintained, works great with LSP colors
-    -- Has four flavors: latte (light), frappe, macchiato, mocha (darkest)
-    {
+
+    -- ── Colorschemes ─────────────────────────────────────────
+    -- One plugin per supported theme; theme_spec() makes exactly one of
+    -- them load. Switch with: bash install.sh --theme <name>
+    theme_spec("catppuccin-mocha", {
       "catppuccin/nvim",
-      name = "catppuccin",   -- name it so we can reference it
-      priority = 1000,       -- load this FIRST before other plugins
-                             -- colorscheme must load early or other
-                             -- plugins get wrong highlight colors
+      name = "catppuccin",
       config = function()
         require("catppuccin").setup({
           flavour = "mocha",          -- darkest variant
@@ -45,12 +77,42 @@ return {
             },
           },
         })
-  
-        -- Actually apply the colorscheme
-        -- Must be called after setup()
         vim.cmd.colorscheme("catppuccin")
       end,
-    },
+    }),
+
+    theme_spec("tokyonight", {
+      "folke/tokyonight.nvim",
+      config = function()
+        require("tokyonight").setup({ style = "night" })
+        vim.cmd.colorscheme("tokyonight-night")
+      end,
+    }),
+
+    theme_spec("gruvbox", {
+      "ellisonleao/gruvbox.nvim",
+      config = function()
+        require("gruvbox").setup({})
+        vim.cmd.colorscheme("gruvbox")
+      end,
+    }),
+
+    theme_spec("kanagawa", {
+      "rebelot/kanagawa.nvim",
+      config = function()
+        require("kanagawa").setup({ theme = "wave" })
+        vim.cmd.colorscheme("kanagawa-wave")
+      end,
+    }),
+
+    theme_spec("rose-pine", {
+      "rose-pine/neovim",
+      name = "rose-pine",
+      config = function()
+        require("rose-pine").setup({ variant = "main" })
+        vim.cmd.colorscheme("rose-pine")
+      end,
+    }),
   
     -- ── Statusline ──────────────────────────────────────────
     -- Lualine — shows info at bottom of screen
@@ -63,7 +125,7 @@ return {
       config = function()
         require("lualine").setup({
           options = {
-            theme = "catppuccin-mocha",       -- match our colorscheme
+            theme = "auto",             -- adapts to whichever colorscheme is active
             globalstatus = true,        -- one statusline for all splits
                                         -- instead of one per split
             component_separators = { left = "", right = "" },

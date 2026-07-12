@@ -18,6 +18,14 @@ PROBLEMS=0
 DOTFILES="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 CONFIG="$HOME/.config"
 
+# ── Theme ──────────────────────────────────────────────────
+hdr "Theme"
+if [ -f "$HOME/.config/dotfiles-theme" ]; then
+  ok "active theme: $(head -1 "$HOME/.config/dotfiles-theme")"
+else
+  note "no ~/.config/dotfiles-theme — using default (catppuccin-mocha)"
+fi
+
 # ── Core tools ─────────────────────────────────────────────
 hdr "Core tools"
 for cmd in nvim tmux fzf rg fd starship zoxide eza delta lazygit tree-sitter; do

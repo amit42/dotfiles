@@ -37,10 +37,81 @@ config.font_rules = {
 }
 
 -- ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
--- THEME — Catppuccin Mocha
+-- THEME
 -- ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
--- Same palette as nvim + tmux + starship — consistent everywhere
-config.color_scheme = "Catppuccin Mocha"
+-- The active theme name lives in ~/.config/dotfiles-theme (one line),
+-- written by `bash install.sh --theme <name>`. Reading it here (instead
+-- of install.sh editing this file) keeps the deployed wezterm.lua
+-- byte-identical to the repo — dotdoctor drift checks stay clean.
+-- Same palette flows to nvim + tmux + starship + ghostty.
+local THEMES = {
+  ["catppuccin-mocha"] = {
+    scheme  = "Catppuccin Mocha",
+    bg      = "#1e1e2e",
+    surface = "#313244",
+    text    = "#cdd6f4",
+    accent  = "#cba6f7",
+    tab_bright = { "#f38ba8", "#fab387", "#f9e2af", "#a6e3a1",
+                   "#89dceb", "#cba6f7", "#f5c2e7", "#94e2d5" },
+    tab_dim    = { "#5e3947", "#5e4738", "#5e5742", "#3f5e3f",
+                   "#385a62", "#51425e", "#5e4d58", "#3f5e58" },
+  },
+  ["tokyonight"] = {
+    scheme  = "Tokyo Night",
+    bg      = "#1a1b26",
+    surface = "#292e42",
+    text    = "#c0caf5",
+    accent  = "#bb9af7",
+    tab_bright = { "#f7768e", "#ff9e64", "#e0af68", "#9ece6a",
+                   "#7dcfff", "#bb9af7", "#7aa2f7", "#1abc9c" },
+    tab_dim    = { "#63394a", "#664636", "#5a4a35", "#425435",
+                   "#39566b", "#4c4366", "#374766", "#175046" },
+  },
+  ["gruvbox"] = {
+    scheme  = "GruvboxDark",
+    bg      = "#282828",
+    surface = "#3c3836",
+    text    = "#ebdbb2",
+    accent  = "#d3869b",
+    tab_bright = { "#fb4934", "#fe8019", "#fabd2f", "#b8bb26",
+                   "#8ec07c", "#d3869b", "#83a598", "#d79921" },
+    tab_dim    = { "#623126", "#63432a", "#615127", "#4f5122",
+                   "#3f5540", "#55414a", "#3e4a48", "#574a24" },
+  },
+  ["kanagawa"] = {
+    scheme  = "Kanagawa (Gogh)",
+    bg      = "#1f1f28",
+    surface = "#2a2a37",
+    text    = "#dcd7ba",
+    accent  = "#957fb8",
+    tab_bright = { "#ff5d62", "#ffa066", "#e6c384", "#98bb6c",
+                   "#7aa89f", "#957fb8", "#7e9cd8", "#d27e99" },
+    tab_dim    = { "#663239", "#664a3c", "#5c5140", "#44502f",
+                   "#38484a", "#42405c", "#3a4560", "#553d48" },
+  },
+  ["rose-pine"] = {
+    scheme  = "rose-pine",
+    bg      = "#191724",
+    surface = "#26233a",
+    text    = "#e0def4",
+    accent  = "#c4a7e7",
+    tab_bright = { "#eb6f92", "#f6c177", "#ebbcba", "#31748f",
+                   "#9ccfd8", "#c4a7e7", "#56949f", "#d7827e" },
+    tab_dim    = { "#5c3346", "#604f3b", "#5c4a4c", "#233a45",
+                   "#3f545c", "#4e4560", "#2b4148", "#573b3d" },
+  },
+}
+
+local function dotfiles_theme()
+  local f = io.open(wezterm.home_dir .. "/.config/dotfiles-theme", "r")
+  if not f then return "catppuccin-mocha" end
+  local name = (f:read("*l") or ""):gsub("%s+$", "")
+  f:close()
+  return THEMES[name] and name or "catppuccin-mocha"
+end
+
+local T = THEMES[dotfiles_theme()]
+config.color_scheme = T.scheme
 
 -- ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 -- WINDOW
@@ -114,25 +185,25 @@ config.tab_max_width = 50                    -- allow wider tabs (default 16) so
 config.window_frame = {
   font      = wezterm.font("JetBrainsMono Nerd Font", { weight = "Regular" }),
   font_size = 11.0,
-  active_titlebar_bg   = "#1e1e2e",
-  inactive_titlebar_bg = "#1e1e2e",
+  active_titlebar_bg   = T.bg,
+  inactive_titlebar_bg = T.bg,
 }
 
--- Tab bar colors — Catppuccin Mocha
+-- Tab bar colors — from the active theme (T)
 config.colors = {
   tab_bar = {
-    background = "#1e1e2e",
+    background = T.bg,
     inactive_tab_hover = {
-      bg_color = "#313244",
-      fg_color = "#cdd6f4",
+      bg_color = T.surface,
+      fg_color = T.text,
     },
     new_tab = {
-      bg_color = "#313244",   -- surface1 — visible against #1e1e2e tab bar
-      fg_color = "#cdd6f4",   -- text — bright "+"
+      bg_color = T.surface,   -- visible against the tab bar bg
+      fg_color = T.text,      -- bright "+"
     },
     new_tab_hover = {
-      bg_color = "#cba6f7",   -- mauve highlight on hover
-      fg_color = "#1e1e2e",
+      bg_color = T.accent,    -- accent highlight on hover
+      fg_color = T.bg,
     },
   },
 }
@@ -141,26 +212,8 @@ config.colors = {
 -- Each tab becomes a coloured "pill" with rounded Nerd-Font caps; active
 -- pops bright, inactive shows a dim version of the same accent so every
 -- tab keeps its identity but the active one is unmistakable.
-local tab_palette_bright = {
-  "#f38ba8",  -- red
-  "#fab387",  -- peach
-  "#f9e2af",  -- yellow
-  "#a6e3a1",  -- green
-  "#89dceb",  -- sky
-  "#cba6f7",  -- mauve
-  "#f5c2e7",  -- pink
-  "#94e2d5",  -- teal
-}
-local tab_palette_dim = {
-  "#5e3947",  -- dim red
-  "#5e4738",  -- dim peach
-  "#5e5742",  -- dim yellow
-  "#3f5e3f",  -- dim green
-  "#385a62",  -- dim sky
-  "#51425e",  -- dim mauve
-  "#5e4d58",  -- dim pink
-  "#3f5e58",  -- dim teal
-}
+local tab_palette_bright = T.tab_bright
+local tab_palette_dim    = T.tab_dim
 
 -- Powerline-style rounded caps (require Nerd Font; you have JBM NF).
 --   U+E0B6 = left half-circle, U+E0B4 = right half-circle
@@ -173,8 +226,8 @@ wezterm.on("format-tab-title", function(tab, _, _, _, _, _)
   local ok, result = pcall(function()
   local i = (tab.tab_index % #tab_palette_bright) + 1
   local bg   = tab.is_active and tab_palette_bright[i] or tab_palette_dim[i]
-  local fg   = tab.is_active and "#1e1e2e" or "#cdd6f4"
-  local bar  = "#1e1e2e"
+  local fg   = tab.is_active and T.bg or T.text
+  local bar  = T.bg
 
   local body
   if tab.tab_title and #tab.tab_title > 0 then

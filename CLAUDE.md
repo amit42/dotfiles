@@ -1,8 +1,21 @@
 # CLAUDE.md — dotfiles
 
 Personal dotfiles for macOS / Linux / WSL: nvim, zsh (zinit), tmux, starship,
-WezTerm, Ghostty, plus a Windows cmd/clink setup. Theme is Catppuccin Mocha
-everywhere — keep new UI consistent with it.
+WezTerm, Ghostty, plus a Windows cmd/clink setup.
+
+## Theming
+
+One theme drives everything: `bash install.sh --theme <name>` with
+catppuccin-mocha (default), tokyonight, gruvbox, kanagawa, rose-pine.
+The choice persists in `~/.config/dotfiles-theme`.
+- nvim (`plugins/ui.lua`, `dashboard.lua`) and wezterm READ that file at
+  startup — never generate/sed their configs, it would break drift checks.
+- tmux/ghostty/starship are materialized by install.sh from
+  `tmux/themes/`, `ghostty/themes/`, and the palette blocks in
+  `zsh/starship.toml` (same palette key names across all themes).
+- Adding a theme = one entry/file in each of those five places.
+- Keep new UI consistent with the ACTIVE theme's palette; when hardcoding
+  a color anywhere, it must come from the theme system, not a hex literal.
 
 ## Golden rules
 
