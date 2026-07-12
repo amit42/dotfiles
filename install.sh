@@ -40,7 +40,13 @@ while [[ $# -gt 0 ]]; do
   case "$1" in
     --theme)   THEME="$2"; shift 2 ;;
     --theme=*) THEME="${1#--theme=}"; shift ;;
-    *) warn "Unknown argument: $1 (supported: --theme <name>)"; shift ;;
+    --list-themes)
+      echo "Available themes (active: $THEME):"
+      for t in $VALID_THEMES; do
+        [[ "$t" == "$THEME" ]] && echo "  * $t" || echo "    $t"
+      done
+      exit 0 ;;
+    *) warn "Unknown argument: $1 (supported: --theme <name>, --list-themes)"; shift ;;
   esac
 done
 
