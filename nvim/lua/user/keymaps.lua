@@ -144,6 +144,17 @@ keymap("t", "<C-l>", "<C-\\><C-N><C-w>l", term_opts)
 keymap("t", "<C-q>", "<C-\\><C-N>:close<CR>", term_opts)
 
 
+-- Inlay hints — inline parameter names / deduced types from the LSP.
+-- Native in Neovim 0.10+; works out of the box with clangd and
+-- rust-analyzer (gopls needs its `hints` settings enabled to emit any).
+-- Off by default to keep code uncluttered; toggle per-buffer when reading
+-- unfamiliar code.
+keymap("n", "<leader>ih", function()
+  local enabled = vim.lsp.inlay_hint.is_enabled({ bufnr = 0 })
+  vim.lsp.inlay_hint.enable(not enabled, { bufnr = 0 })
+  vim.notify("Inlay hints " .. (enabled and "off" or "on"))
+end, vim.tbl_extend("force", opts, { desc = "Toggle inlay hints" }))
+
 -- Lazy lua
 keymap("n", "<leader>l", ":Lazy<CR>", opts)
 

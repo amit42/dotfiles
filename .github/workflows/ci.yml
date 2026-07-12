@@ -1,0 +1,49 @@
+# CI smoke test — catches a broken push before another machine pulls it.
+#   shellcheck : lints install.sh + doctor.sh (both pass at -S warning today;
+#                keep it that way)
+#   nvim-config: restores the pinned plugin set on a clean runner and verifies
+#                the config loads headlessly — the same check doctor.sh runs
+#                locally, proving a fresh machine bootstrap works.
+name: ci
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  shellcheck:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: shellcheck install.sh + doctor.sh
+        run: shellcheck -S warning install.sh doctor.sh
+
+  nvim-config:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Neovim (stable)
+        uses: rhysd/action-setup-vim@v1
+        with:
+          neovim: true
+          version: stable
+
+      - name: Cache plugins (keyed on lockfile)
+        uses: actions/cache@v4
+        with:
+          path: ~/.local/share/nvim
+          key: lazy-${{ hashFiles('nvim/lazy-lock.json') }}
+
+      - name: Deploy config
+        run: |
+          mkdir -p ~/.config
+          cp -r nvim ~/.config/nvim
+
+      - name: Restore pinned plugins
+        run: nvim --headless "+Lazy! restore" +qa
+        timeout-minutes: 10
+
+      - name: Config loads cleanly
+        run: nvim --headless +qa

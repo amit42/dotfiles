@@ -1,3 +1,4 @@
 legacy_nvim
 *.DS_Store
 changes.patch
+.claude/settings.local.json
