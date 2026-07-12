@@ -158,6 +158,10 @@ if [[ "$OS" == "mac" ]]; then
     install_brew_pkg tldr
     install_brew_pkg lnav
     install_brew_pkg golangci-lint
+    install_brew_pkg yazi          # terminal file manager (zshrc: ya = cd-on-quit wrapper)
+    install_brew_pkg dust          # du replacement: sorted tree of disk usage with bars
+    install_brew_pkg duf           # df replacement: colored table of mounts + free space
+    install_brew_pkg procs        # ps replacement: `procs nvim` instead of ps aux | grep
   else
     warn "Homebrew not found — skipping tool installs"
     warn "Install Homebrew from https://brew.sh then re-run"
@@ -167,6 +171,9 @@ elif [[ "$OS" == "linux" ]] || [[ "$OS" == "wsl" ]]; then
   install_apt_pkg fdfind fd-find
   install_apt_pkg rg ripgrep
   install_apt_pkg lnav lnav
+  install_apt_pkg duf duf
+  # dust/procs aren't in Ubuntu's default repos under those names; the
+  # packaged names differ by release, so install via cargo like eza/yazi.
   if ! check_cmd starship; then
     log "Installing starship..."
     curl -sSk https://starship.rs/install.sh | sh -s -- --yes
@@ -191,6 +198,35 @@ elif [[ "$OS" == "linux" ]] || [[ "$OS" == "wsl" ]]; then
   else
     warn "eza already installed — skipping"
   fi
+  # yazi — terminal file manager (zshrc: ya = cd-on-quit wrapper).
+  # Not in Ubuntu apt repos; cargo is the supported install path.
+  if ! check_cmd yazi; then
+    if check_cmd cargo; then
+      log "Installing yazi via cargo..."
+      cargo install --locked yazi-fm yazi-cli && success "Installed yazi"
+    else
+      warn "yazi not installed — install cargo (rustup) then: cargo install --locked yazi-fm yazi-cli"
+    fi
+  else
+    warn "yazi already installed — skipping"
+  fi
+  # install_cargo_pkg <command> <crate> — rust tools not packaged by apt
+  install_cargo_pkg() {
+    local cmd="$1" crate="$2"
+    if check_cmd "$cmd"; then
+      warn "$cmd already installed — skipping"
+      return 0
+    fi
+    if check_cmd cargo; then
+      log "Installing $cmd via cargo..."
+      cargo install --locked "$crate" && success "Installed $cmd" \
+        || warn "Failed to install $cmd via cargo"
+    else
+      warn "$cmd not installed — install cargo (rustup) then: cargo install --locked $crate"
+    fi
+  }
+  install_cargo_pkg dust du-dust
+  install_cargo_pkg procs procs
 fi
 
 echo ""
