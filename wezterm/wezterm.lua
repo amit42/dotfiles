@@ -189,27 +189,15 @@ local function startup_dir()
 end
 config.default_cwd = startup_dir()
 
--- Maximize on launch + prompt to name the first tab. Wrapped in pcall so a
--- failure here (e.g. a deferred prompt firing against a not-yet-realized
--- window) can't crash WezTerm at startup — worst case the window just
--- opens without being maximized / without the prompt.
+-- Maximize on launch. No first-tab name prompt: tabs title themselves
+-- automatically, and entering a workspace (`ts` / `tswitch`) renames the
+-- tab to the project via wtn — so a manual prompt is redundant.
+-- Wrapped in pcall so a failure can't crash WezTerm at startup — worst
+-- case the window just opens without being maximized.
 wezterm.on("gui-startup", function(cmd)
   local ok, err = pcall(function()
-    local tab, pane, window = wezterm.mux.spawn_window(cmd or {})
-    local gui = window:gui_window()
-    gui:maximize()
-    wezterm.time.call_after(0.15, function()
-      pcall(function()
-        gui:perform_action(act.PromptInputLine({
-          description = "Name first tab (Enter to skip):",
-          action = wezterm.action_callback(function(win, _, line)
-            if line and #line > 0 then
-              win:active_tab():set_title(line)
-            end
-          end),
-        }), pane)
-      end)
-    end)
+    local _, _, window = wezterm.mux.spawn_window(cmd or {})
+    window:gui_window():maximize()
   end)
   if not ok then
     wezterm.log_error("gui-startup failed: " .. tostring(err))
@@ -346,20 +334,10 @@ end
 -- (default_prog above); no cmd/PowerShell launch menu.
 config.keys = {
   -- Tabs
-  -- Ctrl+Shift+T: new tab + immediate name prompt. Enter without typing
-  -- leaves the title as just the index.
-  { key = "t", mods = "CTRL|SHIFT", action = wezterm.action_callback(function(window, pane)
-      window:perform_action(act.SpawnTab("CurrentPaneDomain"), pane)
-      window:perform_action(act.PromptInputLine({
-        description = "Name new tab (Enter to skip):",
-        action = wezterm.action_callback(function(win, _, line)
-          if line and #line > 0 then
-            win:active_tab():set_title(line)
-          end
-        end),
-      }), pane)
-    end),
-  },
+  -- Ctrl+Shift+T: new tab, silent — no name prompt. Rename explicitly
+  -- with Ctrl+Shift+N, or `wtn <name>` from the shell; `ts`/`tswitch`
+  -- set the title to the project automatically.
+  { key = "t",          mods = "CTRL|SHIFT", action = act.SpawnTab("CurrentPaneDomain") },
   { key = "w",          mods = "CTRL|SHIFT", action = act.CloseCurrentTab({ confirm = false }) },
   { key = "Tab",        mods = "CTRL",       action = act.ActivateTabRelative(1) },
   { key = "Tab",        mods = "CTRL|SHIFT", action = act.ActivateTabRelative(-1) },
