@@ -38,10 +38,11 @@ vim.opt.rtp:prepend(lazypath)
 require("lazy").setup({
 
   spec = {
-    { import = "user.plugins.ui" },          -- colors, statusline, icons
-    { import = "user.plugins.editor" },      -- telescope, autopairs, etc
-    { import = "user.plugins.treesitter" },  -- syntax highlighting
-    { import = "user.plugins.dap" },         -- debugger (breakpoints, stepping)
+    -- Directory import: every file in lua/user/plugins/ is a plugin spec.
+    -- One file per concern — ui, telescope, nvim-tree, git, editing,
+    -- workspace, markdown, persistence, toggleterm, treesitter, dap.
+    -- Adding a plugin = dropping a new file there; no list to maintain.
+    { import = "user.plugins" },
     { import = "user.lsp.init" },            -- LSP, completion, formatting
   },
 
