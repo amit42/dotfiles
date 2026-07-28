@@ -337,30 +337,17 @@ else
   config.default_prog = { "/bin/zsh", "-l" }
 end
 
--- Launch menu (Ctrl+Shift+Space to open) — lets you spawn alternative shells
--- without changing the default. Useful on Windows where you may want both
--- WSL (default) and native cmd (with Clink + Starship).
-if wezterm.target_triple:find("windows") then
-  -- Plain cmd.exe — cmd's AutoRun (set by clink autorun install) handles
-  -- Clink injection + aliases + STARSHIP_CONFIG. Spawning explicit clink
-  -- here injected it twice and slowed startup.
-  config.launch_menu = {
-    { label = "WSL (zsh)",  args = { "wsl.exe", "-d", "Ubuntu", "--cd", "~", "-e", "/bin/zsh", "-l" } },
-    { label = "cmd",        args = { "cmd.exe" } },
-    { label = "PowerShell", args = { "pwsh.exe" } },
-  }
-end
-
 -- ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 -- KEYBINDINGS
 -- ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 -- Note: tmux handles most multiplexing (panes, windows).
 -- WezTerm keys here are for tab management and OS-level actions only.
+-- Shell is zsh everywhere — macOS/Linux natively, Windows via WSL
+-- (default_prog above); no cmd/PowerShell launch menu.
 config.keys = {
   -- Tabs
-  -- Ctrl+Shift+T: spawn a new tab, then immediately prompt for a name.
-  -- Pressing Enter without typing leaves it as just the index — the prompt
-  -- only sets the title if you provide one.
+  -- Ctrl+Shift+T: new tab + immediate name prompt. Enter without typing
+  -- leaves the title as just the index.
   { key = "t", mods = "CTRL|SHIFT", action = wezterm.action_callback(function(window, pane)
       window:perform_action(act.SpawnTab("CurrentPaneDomain"), pane)
       window:perform_action(act.PromptInputLine({
@@ -377,20 +364,14 @@ config.keys = {
   { key = "Tab",        mods = "CTRL",       action = act.ActivateTabRelative(1) },
   { key = "Tab",        mods = "CTRL|SHIFT", action = act.ActivateTabRelative(-1) },
 
-  -- Rename current tab
-  { key = "r",          mods = "CTRL|SHIFT", action = act.PromptInputLine({
+  -- Ctrl+Shift+N: rename current tab
+  { key = "n",          mods = "CTRL|SHIFT", action = act.PromptInputLine({
       description = "Rename tab:",
       action = wezterm.action_callback(function(window, _, line)
         if line then window:active_tab():set_title(line) end
       end),
     }),
   },
-
-  -- Launcher — Ctrl+Shift+P (Ctrl+Shift+Space gets eaten by Windows IME).
-  -- FUZZY adds search-as-you-type, LAUNCH_MENU_ITEMS pulls in the launch_menu list.
-  { key = "p",          mods = "CTRL|SHIFT", action = act.ShowLauncherArgs({ flags = "FUZZY|LAUNCH_MENU_ITEMS" }) },
-  -- Direct cmd tab on Windows. Plain cmd.exe — AutoRun loads Clink + Starship.
-  { key = "n",          mods = "CTRL|SHIFT", action = act.SpawnCommandInNewTab({ args = { "cmd.exe" } }) },
 
   -- Copy / Paste
   { key = "c",          mods = "CTRL|SHIFT", action = act.CopyTo("Clipboard") },
