@@ -1,6 +1,6 @@
 # Dotfiles
 
-Personal configuration for zsh, tmux, neovim, starship, and WezTerm.
+Personal configuration for zsh, tmux, neovim, starship, WezTerm, and Ghostty.
 Designed for backend, embedded, and DevOps development.
 Bootstraps itself on any machine — one command, everything installs.
 
@@ -13,18 +13,31 @@ sh run.sh
 
 Supports **macOS**, **Linux**, and **WSL**.
 
+Highlights:
+- **One theme everywhere** — 9 switchable themes drive nvim, tmux, starship,
+  WezTerm, and Ghostty together (`bash install.sh --theme gruvbox`)
+- **Project workspaces** — `ts` builds a tmux session per project
+  (EDITOR / AGENT / TERMINAL) with a Claude Code agent window
+- **Pinned plugin versions** — `lazy-lock.json` is committed; every machine
+  gets byte-identical nvim plugins
+- **Self-diagnosing** — `dotdoctor` checks tools, plugins, and config drift
+
 ---
 
 ## Table of Contents
 
 - [Quick Start](#quick-start)
+- [Theming](#theming)
 - [What Gets Installed](#what-gets-installed)
 - [File Structure](#file-structure)
 - [ZSH](#zsh)
+- [Workspace Sessions (ts)](#workspace-sessions-ts)
+- [AI Helpers](#ai-helpers)
 - [Tmux](#tmux)
 - [Neovim](#neovim)
 - [Starship](#starship)
 - [WezTerm](#wezterm)
+- [Health Check](#health-check)
 - [Updating Your Config](#updating-your-config)
 - [Adding to a New Machine](#adding-to-a-new-machine)
 - [Troubleshooting](#troubleshooting)
@@ -55,6 +68,26 @@ tmux
 
 ---
 
+## Theming
+
+One theme drives everything — nvim, tmux, starship, WezTerm, Ghostty:
+
+```bash
+bash install.sh --list-themes     # see all 9
+bash install.sh --theme kanagawa  # switch everything at once
+```
+
+Available: `catppuccin-mocha` (default), `tokyonight`, `gruvbox`, `kanagawa`,
+`rose-pine`, `nord`, `dracula`, `everforest`, `onedark`.
+
+The choice persists in `~/.config/dotfiles-theme`. nvim and WezTerm read it
+at startup; tmux/Ghostty/starship get their palette materialized by
+install.sh. Live tmux sessions are re-themed in place; terminals pick up the
+change on reload. Even the shell startup banner recolors — it renders from
+the terminal's ANSI palette.
+
+---
+
 ## What Gets Installed
 
 ### Tools (auto-installed by install.sh)
@@ -76,7 +109,12 @@ tmux
 | `direnv` | Per-directory environment variables |
 | `atuin` | Shell history sync + fuzzy search |
 | `thefuck` | Corrects your last command |
-| `zoxide` | Smart cd with directory learning |
+| `jq` | JSON processor (powers the `ais` Claude session picker) |
+| `tree-sitter-cli` | Compiles nvim treesitter parsers (required on nvim 0.12+) |
+
+tmux plugins (TPM + sensible + resurrect + continuum) are installed
+headlessly — no manual `Prefix+I` needed. nvim plugins are pinned to
+`nvim/lazy-lock.json` via `:Lazy! restore` on every install.
 
 ### Configs deployed
 
@@ -87,6 +125,9 @@ tmux
 | tmux | `tmux/tmux.conf` | `~/.config/tmux/tmux.conf` |
 | neovim | `nvim/` | `~/.config/nvim/` |
 | WezTerm | `wezterm/wezterm.lua` | `~/.wezterm.lua` |
+| Ghostty | `ghostty/config` | `~/Library/Application Support/com.mitchellh.ghostty/` (mac) / `~/.config/ghostty/` |
+| editorconfig | `editorconfig/editorconfig` | `~/.editorconfig` |
+| clang-format | `clang-format/clang-format` | `~/.clang-format` |
 
 ---
 
@@ -94,20 +135,32 @@ tmux
 
 ```
 dotfiles/
-├── install.sh              ← run this on any machine
+├── install.sh              ← run this on any machine (--theme, --list-themes)
+├── doctor.sh               ← health check (alias: dotdoctor)
+├── run.sh                  ← CRLF-safe wrapper for install.sh (WSL)
+├── CLAUDE.md               ← conventions for Claude Code sessions
 ├── zsh/
-│   ├── zshrc               ← main shell config
-│   └── starship.toml       ← prompt config
+│   ├── zshrc               ← main shell config (aliases, functions, AI helpers)
+│   └── starship.toml       ← prompt config (per-theme palettes)
 ├── tmux/
-│   └── tmux.conf           ← tmux config
+│   ├── tmux.conf           ← tmux config
+│   └── themes/             ← per-theme status bar colors
 ├── nvim/
 │   ├── init.lua            ← neovim entry point
 │   ├── KEYMAPS.md          ← full keymap reference
+│   ├── VIM_GUIDE.md        ← vim learning guide (<leader>? in nvim)
+│   ├── lazy-lock.json      ← pinned plugin versions (committed!)
 │   └── lua/user/
-│       ├── plugins/        ← plugin specs (lazy.nvim)
+│       ├── plugins/        ← one file per concern (telescope, git, dap, …)
 │       └── lsp/            ← LSP, completion, formatting
-└── wezterm/
-    └── wezterm.lua         ← terminal emulator config
+├── wezterm/
+│   └── wezterm.lua         ← terminal emulator config
+├── ghostty/
+│   ├── config              ← alternate terminal (visual parity with wezterm)
+│   └── themes/             ← per-theme palettes
+├── editorconfig/           ← global indent rules (~/.editorconfig)
+├── clang-format/           ← global C/C++ style (~/.clang-format)
+└── windows/                ← cmd + clink + starship for Windows hosts
 ```
 
 ---
@@ -367,6 +420,54 @@ Use this whenever the prompt hits the bottom after long command output.
 
 ---
 
+## Workspace Sessions (ts)
+
+`ts` from any project directory creates (or re-attaches to) a tmux session
+named after the directory, with a fixed window layout:
+
+| Window | What |
+|--------|------|
+| 1 ` EDITOR` | nvim |
+| 2 `󰍛 AGENT` | Claude Code (`--continue`, resumes the project's last conversation) |
+| 3 ` TERMINAL` | plain shell |
+| 4 ` CMD` | cmd.exe (WSL only) |
+
+Extra windows from `Prefix+c` auto-name themselves `ALPHA`, `BETA`, `GAMMA`, …
+(first unused Greek letter — closing a window recycles its name).
+
+| Command | What it does |
+|---------|-------------|
+| `ts` | create/attach the session for the current directory |
+| `tn <name>` | attach-or-create a session by name |
+| `tswitch` | fzf picker over sessions (switches inside tmux, attaches outside) |
+| `tq` | detach (session keeps running) |
+| `tkill` | kill current session |
+
+`ts` and `tswitch` also rename the WezTerm tab to match the session, so
+terminal tabs mirror your projects.
+
+---
+
+## AI Helpers
+
+All powered by [Claude Code](https://claude.com/claude-code); every helper is
+a no-op if `claude` isn't installed.
+
+| Command | What it does |
+|---------|-------------|
+| `ai "question"` | one-shot answer in the terminal |
+| `aiy "do X"` | same, with permissions skipped (own projects only) |
+| `aime "what's my keymap for …"` | ask about *your own setup* — read-only, persistent session |
+| `aidiff [--staged]` | pipe a git diff to Claude for a quick review |
+| `ais` | fzf picker over this project's Claude sessions — transcript preview, Enter resumes |
+
+**Inside nvim** (see [Neovim](#neovim)): `Ctrl+a` toggles a floating Claude
+terminal that resumes the project conversation; `<Space>ab` types an
+`@current-file` mention into its prompt, `<Space>as` (visual) mentions the
+selected line range.
+
+---
+
 ## Tmux
 
 ### Prefix key
@@ -393,7 +494,7 @@ Use this whenever the prompt hits the bottom after long command output.
 
 | Key | Action |
 |-----|--------|
-| `Prefix+c` | new window (in current path) |
+| `Prefix+c` | new window in current path, auto-named ALPHA/BETA/GAMMA… |
 | `Prefix+,` | rename window |
 | `Prefix+w` | window list |
 | `Prefix+1-9` | jump to window by number |
@@ -466,21 +567,43 @@ Full keymap reference: `nvim/KEYMAPS.md`
 |-----|--------|
 | `Space+w` | save file |
 | `Space+q` | quit |
-| `Space+e` | toggle file explorer |
+| `Space+e` | file browser (telescope) |
+| `Space+n` | toggle file tree (floating nvim-tree) |
 | `Space+l` | open Lazy plugin manager |
 | `jk` | exit insert mode |
 | `Ctrl+\` | toggle floating terminal |
 
-**Telescope (fuzzy finder)**
+**Claude Code**
 
 | Key | Action |
 |-----|--------|
-| `Space+f` | find files |
-| `Space+g` | live grep (search text in project) |
-| `Space+b` | open buffers |
-| `Space+r` | recent files |
-| `Space+p` | projects |
-| `Space+c` | git commits |
+| `Ctrl+a` | toggle floating Claude (resumes project conversation; same key hides it) |
+| `Space+ab` | type `@current-file` into Claude's prompt |
+| `Space+as` | (visual) type `@file lines N-M` for the selection |
+
+**Telescope (fuzzy finder — all under `Space+t`)**
+
+| Key | Action |
+|-----|--------|
+| `Space+tf` | find files |
+| `Space+tg` | live grep (search text in project) |
+| `Space+t/` | fuzzy search in current buffer |
+| `Space+t.` | resume last picker (results intact) |
+| `Space+tb` | open buffers |
+| `Space+tr` | recent files |
+| `Space+tp` | projects |
+| `Space+tc` | git commits |
+| `Space+tt` | search TODO/FIXME comments |
+
+**Motion**
+
+| Key | Action |
+|-----|--------|
+| `s` + 2 chars | flash jump anywhere on screen |
+| `]f / [f` | next/prev function |
+| `]h / [h` | next/prev git hunk |
+| `]t / [t` | next/prev TODO comment |
+| `vif / vaf` | select inner/outer function (textobjects) |
 
 **LSP**
 
@@ -494,6 +617,15 @@ Full keymap reference: `nvim/KEYMAPS.md`
 | `Space+lf` | format file |
 | `Space+lq` | buffer diagnostics |
 
+**Debug (DAP — VS Code conventions)**
+
+| Key | Action |
+|-----|--------|
+| `F5` | start / continue |
+| `F9` | toggle breakpoint |
+| `F10 / F11 / F12` | step over / into / out |
+| `Space+du` | toggle debug UI |
+
 **Git**
 
 | Key | Action |
@@ -503,7 +635,7 @@ Full keymap reference: `nvim/KEYMAPS.md`
 | `]h / [h` | next/prev git hunk |
 | `Space+hs` | stage hunk |
 | `Space+hr` | reset hunk |
-| `Space+tb` | toggle inline blame |
+| `Space+gb` | toggle inline blame |
 
 **Navigation**
 
@@ -512,7 +644,7 @@ Full keymap reference: `nvim/KEYMAPS.md`
 | `Shift+l / Shift+h` | next/prev buffer |
 | `Space+x` | close buffer |
 | `Ctrl+h/j/k/l` | move between splits |
-| `Ctrl+d / Ctrl+u` | scroll down/up (centered) |
+| `Ctrl+d / Ctrl+u` | smooth scroll down/up |
 
 ---
 
@@ -552,11 +684,11 @@ Config: `dotfiles/wezterm/wezterm.lua` → deployed to `~/.wezterm.lua`
 
 | Key | Action |
 |-----|--------|
-| `Ctrl+Shift+T` | new tab |
+| `Ctrl+Shift+T` | new tab (prompts for a name; Enter skips) |
+| `Ctrl+Shift+N` | rename current tab |
 | `Ctrl+Shift+W` | close tab |
 | `Ctrl+Tab` | next tab |
 | `Ctrl+Shift+Tab` | previous tab |
-| `Ctrl+Shift+R` | rename tab |
 | `Ctrl+Shift+C` | copy |
 | `Ctrl+Shift+V` | paste |
 | `Ctrl+=` | increase font size |
@@ -566,18 +698,26 @@ Config: `dotfiles/wezterm/wezterm.lua` → deployed to `~/.wezterm.lua`
 | `Cmd+R` | reload config |
 
 > Pane splitting and navigation is handled by **tmux**, not WezTerm.
+> On Windows hosts WezTerm boots straight into WSL zsh automatically
+> (`default_prog` detects the platform — no edits needed).
 
-### WSL setup
+---
 
-To use WezTerm with WSL, update `wezterm.lua`:
+## Health Check
 
-```lua
--- Comment out:
--- config.default_prog = { "/bin/zsh", "-l" }
-
--- Uncomment:
-config.default_prog = { "wsl.exe", "--distribution", "Ubuntu", "--exec", "/bin/zsh", "-l" }
+```bash
+dotdoctor        # alias for: bash doctor.sh
 ```
+
+Verifies, with a ✓/✗ per item:
+- core tools on PATH (nvim, tmux, fzf, rg, jq, tree-sitter, …)
+- nvim loads headlessly, treesitter parsers compiled, project.nvim history intact
+- TPM + resurrect + continuum installed **and** the resurrect save is fresh
+- `lazy-lock.json` committed and matching the deployed copy
+- drift between this repo and every deployed config
+
+Exit code = number of problems, so it's script/CI-friendly. A GitHub Actions
+workflow runs shellcheck + a headless nvim bootstrap on every push.
 
 ---
 
@@ -610,17 +750,18 @@ Prefix+r    # reload config live
 ### Change neovim config
 
 ```bash
-nvim dotfiles/nvim/lua/user/plugins/editor.lua   # or whichever file
-# Changes take effect immediately in neovim (no install.sh needed)
-# Lazy auto-installs/removes plugins on next nvim open
+nvim dotfiles/nvim/lua/user/plugins/telescope.lua   # one file per concern
+bash install.sh    # deploys to ~/.config/nvim and re-pins plugins
 ```
 
-### Update p10k / starship prompt style
+### Upgrade nvim plugins (intentionally)
+
+Plugin versions are pinned to `nvim/lazy-lock.json`. To upgrade:
 
 ```bash
-# For starship — edit the TOML directly
-nvim dotfiles/zsh/starship.toml
-bash install.sh && source ~/.zshrc
+# In nvim: :Lazy sync — then test things work, then:
+cp ~/.config/nvim/lazy-lock.json dotfiles/nvim/lazy-lock.json
+git commit -m "nvim: bump plugin pins"
 ```
 
 ---
@@ -642,16 +783,17 @@ bash install.sh
 # 4. Reload shell
 source ~/.zshrc
 
-# 5. Install tmux plugins
-tmux
-# Ctrl+Space I
-
-# 6. Open neovim (lazy auto-installs all plugins)
+# 5. Open neovim — plugins restore to the pinned lockfile versions
 nvim
 
-# 7. Install JetBrainsMono Nerd Font on the host machine
+# 6. Install JetBrainsMono Nerd Font on the host machine
 # Download from: https://www.nerdfonts.com/font-downloads
+
+# 7. Verify everything
+dotdoctor
 ```
+
+tmux plugins install automatically during step 3 — no manual `Prefix+I`.
 
 ---
 
