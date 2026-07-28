@@ -2075,18 +2075,13 @@ alias zshr='source ~/.zshrc'
 # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 # STARTUP BANNER
 # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-# Orange Catholic Bible — Dune. Shown every interactive shell.
+# Palette strip + host. The color blocks are the terminal's ANSI palette,
+# which the theme system controls — switch themes (install.sh --theme X)
+# and the banner recolors itself. Zero external commands except date.
 if [[ -o interactive ]]; then
-  printf '\n'
-  printf '\033[38;5;238m   ▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓\033[0m\n'
-  printf '\n'
-  printf '\033[38;5;222m        ❝  Thou shalt not make a machine\033[0m\n'
-  printf '\033[38;5;214m              in the likeness of a human mind.  ❞\033[0m\n'
-  printf '\n'
-  printf '\033[38;5;240m                             — The Orange Catholic Bible\033[0m\n'
-  printf '\n'
-  printf '\033[38;5;238m   ▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓\033[0m\n'
-  printf '\n'
+  _banner_date=$(date '+%a %d %b'); _banner_date=${(L)_banner_date}
+  print -P "\n  %F{1}██%f %F{2}██%f %F{3}██%f %F{4}██%f %F{5}██%f %F{6}██%f %F{12}██%f %F{13}██%f   %F{8}${USER} @ %m · ${_banner_date}%f\n"
+  unset _banner_date
 fi
 
 
