@@ -505,11 +505,23 @@ wtn() {
     wt=wezterm.exe
   elif command -v wezterm &>/dev/null; then
     wt=wezterm
+  elif [[ -x "/Applications/WezTerm.app/Contents/MacOS/wezterm" ]]; then
+    # macOS app-bundle install — the CLI isn't linked onto PATH
+    wt="/Applications/WezTerm.app/Contents/MacOS/wezterm"
   else
     echo "wtn: wezterm CLI not on PATH" >&2
     return 1
   fi
-  "$wt" cli set-tab-title "$*"
+  # Long-lived tmux shells inherit a stale WEZTERM_PANE from whenever the
+  # pane was created; the tmux session env is refreshed on every client
+  # attach (update-environment in tmux.conf), so prefer that value.
+  local pane="$WEZTERM_PANE"
+  if [[ -n "$TMUX" ]]; then
+    local t
+    t=$(tmux show-environment WEZTERM_PANE 2>/dev/null | cut -d= -f2)
+    [[ -n "$t" ]] && pane="$t"
+  fi
+  "$wt" cli set-tab-title --pane-id "$pane" "$*"
 }
 
 # Safer file operations — -i prompts before overwriting/deleting,
@@ -1630,6 +1642,64 @@ if command -v claude &>/dev/null; then
     rm -f "$HOME/.cache/aime-session" && echo "aime session reset."
   }
 
+  # ais — fzf session picker for Claude Code, nicer than `claude --resume`'s
+  # built-in list. Shows this project's sessions (newest first) with a live
+  # conversation preview on the right; Enter resumes the picked session.
+  # Sessions are plain JSONL under ~/.claude/projects/<munged-cwd>/.
+  ais() {
+    command -v fzf >/dev/null || { echo "ais needs fzf" >&2; return 1; }
+    command -v jq  >/dev/null || { echo "ais needs jq (brew install jq)" >&2; return 1; }
+
+    # Claude munges the project path into a dir name: / and . become -
+    local munged="${PWD//\//-}"; munged="${munged//./-}"
+    local proj="$HOME/.claude/projects/$munged"
+    [[ -d "$proj" ]] || { echo "No Claude sessions recorded for $PWD" >&2; return 1; }
+
+    # One line per session: id <TAB> mtime <TAB> title.
+    # Title = Claude's own conversation summary if present, else the first
+    # user message. (N.om) = null_glob + newest-first by mtime.
+    # Titles cycle through the ANSI palette per row (same idea as the tmux
+    # tab colors) so adjacent sessions are visually distinct.
+    local -a rowcolor=($'\e[1;35m' $'\e[1;34m' $'\e[1;36m' $'\e[1;32m' $'\e[1;33m' $'\e[1;31m')
+    local n=0
+    local f id when title lines=""
+    for f in "$proj"/*.jsonl(N.om); do
+      id="${f:t:r}"
+      if [[ "$OSTYPE" == darwin* ]]; then
+        when=$(stat -f '%Sm' -t '%d %b %H:%M' "$f")
+      else
+        when=$(date -r "$f" '+%d %b %H:%M')
+      fi
+      title=$(jq -r 'select(.type=="summary") | .summary // empty' "$f" 2>/dev/null | tail -1)
+      [[ -z "$title" ]] && title=$(jq -r '
+          select(.type=="user") | .message.content
+          | if type=="string" then . else ([.[]? | .text? // empty] | join(" ")) end
+          | select(length>0)' "$f" 2>/dev/null | head -1)
+      # ANSI palette colors (not hex) so the picker follows the active theme:
+      # dim timestamp, per-row cycling title color. fzf needs --ansi.
+      lines+="${id}"$'\t\e[2m'"${when}"$'\e[0m\t'"${rowcolor[$(( n % ${#rowcolor} + 1 ))]}${title:0:100}"$'\e[0m\n'
+      (( n++ ))
+    done
+    [[ -z "$lines" ]] && { echo "No sessions found." >&2; return 1; }
+
+    # Preview: readable transcript tail — magenta ❯ you, green ● claude.
+    local preview='jq -r '\''
+        select(.type=="user" or .type=="assistant")
+        | (.message.content
+           | if type=="string" then .
+             else ([.[]? | .text? // empty] | join(" ")) end) as $c
+        | select(($c|length) > 0)
+        | (if .type=="user" then "[1;35m❯[0m " else "[1;32m●[0m " end) + $c'\'' '"$proj"'/{1}.jsonl 2>/dev/null | tail -60'
+
+    local pick
+    pick=$(printf '%s' "$lines" | fzf --ansi \
+      --delimiter=$'\t' --with-nth=2,3 \
+      --preview="$preview" --preview-window='right:55%:wrap' \
+      --prompt='claude sessions ❯ ' --height=90% --reverse) || return 0
+
+    claude --resume "${pick%%$'\t'*}"
+  }
+
   # aidiff — pipe a git diff into Claude for a quick code review.
   #   aidiff              → review unstaged changes
   #   aidiff --staged     → review what's about to be committed
@@ -1871,15 +1941,17 @@ alias tkillall='tmux kill-server'
 # ts — attach to a session named after the current directory, or create
 # a new one with pre-configured windows:
 #   1. editor  — opens nvim (dashboard handles startup)
-#   2. terminal — plain shell for running commands
-#   3. logs    — dedicated pane for tailing logs / lnav
+#   2. agent   — claude Code session named after the project
+#   3. terminal — plain shell for running commands
 #   4. cmd     — cmd.exe (WSL only)
-#   5. agent   — claude Code session named after the project
+# Extra terminals: Prefix+c opens TERMINAL1, TERMINAL2, … (see tmux.conf).
 # If the session already exists, just attach (windows are left as-is).
 # Usage: ts    — from ~/dev/myproject creates/attaches session "myproject"
 ts() {
   local name
   name="$(basename "$PWD")"
+  # Keep the WezTerm tab title in sync with the session (no-op elsewhere)
+  wtn "$name" 2>/dev/null
   if tmux has-session -t "$name" 2>/dev/null; then
     tmux attach-session -t "$name"
   else
@@ -1892,13 +1964,11 @@ ts() {
     #   U+E7C5  nf-custom-vim         → EDITOR
     #   U+F489  zsh/shell glyph       → TERMINAL
     #   U+EBC4  nf-cod-terminal-cmd   → CMD
-    #   U+F021A md-icon (logs)        → LOGS    (4-byte UTF-8)
     #   U+F035B md-icon (robot/agent) → AGENT   (4-byte UTF-8)
-    local n_editor   n_terminal n_logs n_cmd n_agent
+    local n_editor   n_terminal n_cmd n_agent
     n_editor=$(printf   '\xee\x9f\x85')         #
     n_terminal=$(printf '\xef\x92\x89')         #
     n_cmd=$(printf      '\xee\xaf\x84')         #
-    n_logs=$(printf     '\xf3\xb0\x88\x9a')     # (4-byte)
     n_agent=$(printf    '\xf3\xb0\x8d\x9b')     # (4-byte)
 
     # Pad each "icon + name" to a fixed character width using zsh's right-pad
@@ -1908,19 +1978,15 @@ ts() {
     local target_w=11   # tightest fit — longest is "<icon>  TERMINAL" = 11 chars
     local w_editor="${n_editor}  EDITOR"
     local w_terminal="${n_terminal}  TERMINAL"
-    local w_logs="${n_logs}  LOGS"
     local w_cmd="${n_cmd}  CMD"
     local w_agent="${n_agent}  AGENT"
     w_editor="${(r:$target_w:)w_editor}"
     w_terminal="${(r:$target_w:)w_terminal}"
-    w_logs="${(r:$target_w:)w_logs}"
     w_cmd="${(r:$target_w:)w_cmd}"
     w_agent="${(r:$target_w:)w_agent}"
 
+    # Window order: EDITOR → AGENT → TERMINAL (→ CMD on WSL).
     local cmd="tmux new-session -d -s '$name' -c '$PWD' -n '${w_editor}' \"zsh -ic 'nvim; exec zsh'\""
-    cmd+=" \; new-window -n '${w_terminal}' -c '$PWD'"
-    cmd+=" \; new-window -n '${w_logs}' -c '$PWD'"
-    [[ "$is_wsl" == true ]] && cmd+=" \; new-window -n '${w_cmd}' -c '$PWD' 'cmd.exe'"
     # --dangerously-skip-permissions:
     #   • bypasses the per-folder "Do you trust this folder?" dialog
     #   • auto-allows Read/Edit/Bash on cwd without prompting
@@ -1931,6 +1997,8 @@ ts() {
     # Falls back to a fresh `claude` if no previous session exists (claude
     # --continue exits non-zero in that case, so the `||` triggers).
     cmd+=" \; new-window -n '${w_agent}' -c '$PWD' \"zsh -ic 'claude --continue --dangerously-skip-permissions || claude --dangerously-skip-permissions; exec zsh'\""
+    cmd+=" \; new-window -n '${w_terminal}' -c '$PWD'"
+    [[ "$is_wsl" == true ]] && cmd+=" \; new-window -n '${w_cmd}' -c '$PWD' 'cmd.exe'"
     cmd+=" \; select-window -t '$name:1'"
     cmd+=" \; attach-session -t '$name'"
     eval "$cmd"
@@ -1975,12 +2043,21 @@ alias tls='tmux list-sessions 2>/dev/null || echo "No tmux sessions running."'
 
 # tswitch — fzf picker to jump between tmux sessions.
 # Press Enter on a session name to switch to it.
+# Inside tmux → switch-client; outside → attach (switch-client only
+# works from within a tmux client, silently failing otherwise).
 # Usage: tswitch
 tswitch() {
   local session
   session=$(tmux list-sessions -F '#{session_name}' 2>/dev/null \
     | fzf --prompt='tmux session> ' --height=10 --reverse)
-  [[ -n "$session" ]] && tmux switch-client -t "$session"
+  [[ -z "$session" ]] && return 0
+  # Keep the WezTerm tab title in sync with the session (no-op elsewhere)
+  wtn "$session" 2>/dev/null
+  if [[ -n "$TMUX" ]]; then
+    tmux switch-client -t "$session"
+  else
+    tmux attach-session -t "$session"
+  fi
 }
 
 # tn — attach to or create a named tmux session.
