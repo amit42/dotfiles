@@ -463,6 +463,38 @@ dotup() {
 # Usage: dotdoctor
 alias dotdoctor='bash ~/Desktop/dotfiles/dotfiles/doctor.sh'
 
+# wallpaper — one switch for the terminal-background image AND nvim
+# transparency (both key off ~/.config/dotfiles-wallpaper).
+#   wallpaper           → fzf-pick from ~/.config/wallpapers
+#   wallpaper <path>    → use a specific image
+#   wallpaper off       → plain backgrounds everywhere
+# wezterm picks the change up immediately; running nvim instances need a
+# restart (the transparency check runs at startup).
+wallpaper() {
+  local ptr="$HOME/.config/dotfiles-wallpaper"
+  case "$1" in
+    off)
+      command rm -f "$ptr"
+      echo "wallpaper off — nvim opaque again after restart"
+      ;;
+    "")
+      command -v fzf >/dev/null || { echo "needs fzf" >&2; return 1; }
+      local pick
+      pick=$(ls "$HOME/.config/wallpapers" 2>/dev/null | fzf --prompt='wallpaper ❯ ') || return 0
+      [[ -z "$pick" ]] && return 0
+      echo "$HOME/.config/wallpapers/$pick" > "$ptr"
+      echo "wallpaper: $pick"
+      ;;
+    *)
+      [[ -f "$1" ]] || { echo "no such image: $1" >&2; return 1; }
+      echo "${1:A}" > "$ptr"   # :A = absolute path
+      echo "wallpaper: ${1:t}"
+      ;;
+  esac
+  # Nudge wezterm to re-evaluate its config (it doesn't watch the pointer)
+  touch "$HOME/.wezterm.lua" 2>/dev/null
+}
+
 # Auto-list after cd — runs `ls` every time you change directory.
 # Uses the ls alias (eza with icons if installed) so the listing
 # is always styled. Defined via add-zsh-hook so it stacks cleanly

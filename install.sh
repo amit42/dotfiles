@@ -545,6 +545,20 @@ else
   warn "dotfiles/wezterm/wezterm.lua not found — skipping"
 fi
 
+# Wallpapers — wezterm layers the image under a theme-bg wash.
+# ~/.config/dotfiles-wallpaper points at the active image; seeded once
+# with the default, then left alone (delete the file for no wallpaper,
+# or point it at any image you like).
+if [[ -d "$DOTFILES/wallpapers" ]]; then
+  mkdir -p "$CONFIG/wallpapers"
+  cp "$DOTFILES/wallpapers/"* "$CONFIG/wallpapers/"
+  success "Copied wallpapers → $CONFIG/wallpapers"
+  if [[ ! -f "$HOME/.config/dotfiles-wallpaper" ]]; then
+    echo "$CONFIG/wallpapers/rainy-window.jpeg" > "$HOME/.config/dotfiles-wallpaper"
+    success "Wallpaper set: rainy-window (edit ~/.config/dotfiles-wallpaper to change)"
+  fi
+fi
+
 # Ghostty: macOS app reads from ~/Library/Application Support/com.mitchellh.ghostty/
 # Linux/other reads from ~/.config/ghostty/config
 # The main config includes theme-dotfiles.conf (same dir), deployed from

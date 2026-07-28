@@ -24,6 +24,38 @@ local function augroup(name)
       })
     end,
   })
+
+  -- ── Wallpaper transparency ────────────────────────────────
+  -- When ~/.config/dotfiles-wallpaper exists (the same switch wezterm's
+  -- background image keys off), make nvim's MAIN canvas transparent so
+  -- the wallpaper shows through — floats, statusline, and popups keep
+  -- their opaque background for readability. Works for all 9 themes
+  -- without touching each plugin's own transparency flag: we just strip
+  -- the bg from the canvas groups after any colorscheme loads.
+  -- Toggle off = delete the pointer file (`wallpaper off` in zsh) and
+  -- restart nvim.
+  local function wallpaper_active()
+    local f = io.open(vim.fn.expand("~/.config/dotfiles-wallpaper"), "r")
+    if not f then return false end
+    local p = (f:read("*l") or ""):gsub("%s+$", "")
+    f:close()
+    return p ~= "" and vim.fn.filereadable(vim.fn.expand(p)) == 1
+  end
+
+  if wallpaper_active() then
+    vim.api.nvim_create_autocmd("ColorScheme", {
+      group = augroup("wallpaper_transparency"),
+      callback = function()
+        for _, grp in ipairs({ "Normal", "NormalNC", "EndOfBuffer", "SignColumn" }) do
+          -- Clear ONLY the bg: nvim_set_hl replaces the whole group, so
+          -- re-apply the existing definition minus its background.
+          local hl = vim.api.nvim_get_hl(0, { name = grp, link = false })
+          hl.bg = nil
+          vim.api.nvim_set_hl(0, grp, hl)
+        end
+      end,
+    })
+  end
   
   -- ── Restore Cursor Position ───────────────────────────────
   -- When reopening a file, jump to where cursor was last time

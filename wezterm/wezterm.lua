@@ -163,6 +163,45 @@ config.color_scheme = T.scheme
 config.window_background_opacity = 0.95      -- slight transparency
 config.macos_window_background_blur = 20     -- frosted glass blur (macOS only)
 
+-- ── Background wallpaper (optional) ─────────────────────
+-- ~/.config/dotfiles-wallpaper holds one line: a path to an image
+-- (install.sh seeds it with the default; delete the file for a plain
+-- background). The image is layered under a near-opaque wash of the
+-- theme's bg color so text contrast survives — the art reads as
+-- texture, not noise. Reading a pointer file (like dotfiles-theme)
+-- keeps the deployed config byte-identical to the repo for dotdoctor.
+local function wallpaper_path()
+  local f = io.open(wezterm.home_dir .. "/.config/dotfiles-wallpaper", "r")
+  if not f then return nil end
+  local p = (f:read("*l") or ""):gsub("%s+$", "")
+  f:close()
+  if p == "" then return nil end
+  p = p:gsub("^~", wezterm.home_dir)
+  local probe = io.open(p, "r")
+  if not probe then return nil end
+  probe:close()
+  return p
+end
+
+local wallpaper = wallpaper_path()
+if wallpaper then
+  config.background = {
+    {
+      source = { File = wallpaper },
+      hsb    = { brightness = 0.45 },    -- gentle dim — pick DARK images; bright ones
+                                         -- will always fight the text (see README)
+      width  = "100%",
+      height = "100%",
+    },
+    {
+      source  = { Color = T.bg },        -- theme bg wash — follows the active theme
+      opacity = 0.82,                    -- lower = more image shows through
+      width   = "100%",
+      height  = "100%",
+    },
+  }
+end
+
 config.window_padding = {
   left = 12, right = 12, top = 8, bottom = 8,
 }
