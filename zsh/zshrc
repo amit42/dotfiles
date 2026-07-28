@@ -1931,12 +1931,43 @@ fi
 # The session stays alive in the background; re-attach with ts or tn.
 alias tq='tmux detach'
 
-# tkill — kill the current tmux session entirely.
-# All windows and panes in the session are destroyed.
-alias tkill='tmux kill-session'
+# tkill — kill the current tmux session entirely, and update the
+# resurrect snapshot so the killed session doesn't come back on the next
+# server start. Resurrect saves are whole-server snapshots (not
+# per-session files), so "forgetting" one session = re-snapshotting the
+# server after it's gone. The snapshot runs as a detached background job
+# because killing the session from inside it kills this shell too —
+# nothing after `tmux kill-session` would execute.
+# These were aliases once — in a re-sourced shell the stale alias would
+# shadow the function (zsh expands aliases first), silently skipping the
+# resurrect cleanup. Drop them before defining.
+unalias tkill tkillall 2>/dev/null
 
-# tkillall — kill every tmux session on the server.
-alias tkillall='tmux kill-server'
+function tkill {
+  local save="$HOME/.config/tmux/plugins/tmux-resurrect/scripts/save.sh"
+  nohup zsh -c "
+    sleep 1
+    if tmux ls >/dev/null 2>&1; then
+      [ -x '$save' ] && '$save' quiet
+    else
+      # that was the last session — server died, nothing left to restore
+      rm -rf '$HOME/.local/share/tmux/resurrect'
+    fi
+  " >/dev/null 2>&1 &!
+  tmux kill-session
+}
+
+# tkillall — kill every tmux session on the server, PERMANENTLY.
+# continuum has restore-on-start, so a plain kill-server gets undone the
+# moment the next `ts`/`tmux` starts the server — every "killed" session
+# reappears. Deleting the resurrect state makes the kill stick.
+function tkillall {
+  # Wipe BEFORE killing: run from inside tmux, kill-server takes this
+  # very shell down with it — anything after never executes.
+  command rm -rf "$HOME/.local/share/tmux/resurrect"
+  echo "resurrect state wiped; killing server..."
+  tmux kill-server 2>/dev/null
+}
 
 # ts — attach to a session named after the current directory, or create
 # a new one with pre-configured windows:
