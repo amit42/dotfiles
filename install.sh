@@ -191,6 +191,7 @@ if [[ "$OS" == "mac" ]]; then
     install_brew_pkg tldr
     install_brew_pkg lnav
     install_brew_pkg golangci-lint
+    install_brew_pkg jq        # ais (Claude session picker) parses session JSONL with it
     install_brew_pkg yazi          # terminal file manager (zshrc: ya = cd-on-quit wrapper)
     install_brew_pkg dust          # du replacement: sorted tree of disk usage with bars
     install_brew_pkg duf           # df replacement: colored table of mounts + free space
@@ -204,6 +205,7 @@ elif [[ "$OS" == "linux" ]] || [[ "$OS" == "wsl" ]]; then
   install_apt_pkg fdfind fd-find
   install_apt_pkg rg ripgrep
   install_apt_pkg lnav lnav
+  install_apt_pkg jq jq      # ais (Claude session picker) parses session JSONL with it
   install_apt_pkg duf duf
   # dust/procs aren't in Ubuntu's default repos under those names; the
   # packaged names differ by release, so install via cargo like eza/yazi.
@@ -474,8 +476,12 @@ if ! check_cmd tmux; then
 fi
 
 if check_cmd tmux; then
-  # TPM — tmux plugin manager, self-installs plugins on first tmux start
-  TPM_DIR="$HOME/.tmux/plugins/tpm"
+  # TPM — tmux plugin manager. Must live under $CONFIG/tmux/plugins: tmux
+  # derives TMUX_PLUGIN_MANAGER_PATH from the config file's directory, and
+  # our tmux.conf is at $CONFIG/tmux/. (The old ~/.tmux/plugins/tpm clone
+  # was NEVER used by tmux — TPM "installed ✓" while resurrect/continuum
+  # silently didn't exist, so session persistence never ran.)
+  TPM_DIR="$CONFIG/tmux/plugins/tpm"
   if [[ ! -d "$TPM_DIR" ]]; then
     log "Installing TPM (tmux plugin manager)..."
     git clone https://github.com/tmux-plugins/tpm "$TPM_DIR" && success "Installed TPM"
@@ -485,6 +491,17 @@ if check_cmd tmux; then
 
   safe_copy "$DOTFILES/tmux/tmux.conf" "$CONFIG/tmux/tmux.conf"
   append_if_missing "$HOME/.tmux.conf" "source $CONFIG/tmux/tmux.conf"
+
+  # Install the plugins headlessly instead of waiting for a manual
+  # Prefix+I — resurrect/continuum only protect sessions if they're
+  # actually present and saving.
+  if [[ -x "$TPM_DIR/bin/install_plugins" ]]; then
+    if "$TPM_DIR/bin/install_plugins" >/dev/null 2>&1; then
+      success "tmux plugins installed (sensible, resurrect, continuum)"
+    else
+      warn "TPM plugin install failed — open tmux and press Prefix+I"
+    fi
+  fi
 
   # Status-bar colors live in a per-theme file sourced by tmux.conf
   if [[ -f "$DOTFILES/tmux/themes/$THEME.conf" ]]; then

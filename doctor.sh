@@ -28,13 +28,17 @@ fi
 
 # ── Core tools ─────────────────────────────────────────────
 hdr "Core tools"
-for cmd in nvim tmux fzf rg fd starship zoxide eza delta lazygit tree-sitter; do
+for cmd in nvim tmux fzf rg fd starship zoxide eza delta lazygit tree-sitter jq; do
   if command -v "$cmd" &>/dev/null; then
     ok "$cmd"
   else
     bad "$cmd missing — re-run install.sh"
   fi
 done
+# claude is installed separately (not by install.sh) — note, not an error
+command -v claude &>/dev/null \
+  && ok "claude" \
+  || note "claude CLI not installed — ai/aiy/aime/ais helpers inactive"
 
 # ── Neovim ─────────────────────────────────────────────────
 hdr "Neovim"
@@ -70,9 +74,28 @@ fi
 
 # ── Plugin managers ────────────────────────────────────────
 hdr "Plugin managers"
-[ -d "$HOME/.tmux/plugins/tpm" ] \
+# tmux derives its plugin path from the config location — $CONFIG/tmux/plugins,
+# NOT ~/.tmux/plugins. Checking the wrong path here once reported "TPM ✓"
+# while resurrect/continuum were never installed at all.
+[ -d "$CONFIG/tmux/plugins/tpm" ] \
   && ok "TPM installed" \
   || bad "TPM missing — re-run install.sh"
+for plug in tmux-resurrect tmux-continuum; do
+  [ -d "$CONFIG/tmux/plugins/$plug" ] \
+    && ok "$plug installed" \
+    || bad "$plug missing — re-run install.sh (or Prefix+I in tmux)"
+done
+# Session persistence is only real if resurrect is actually SAVING.
+RESURRECT_LAST="$HOME/.local/share/tmux/resurrect/last"
+if [ -e "$RESURRECT_LAST" ]; then
+  if [ -n "$(find "$RESURRECT_LAST" -mtime -1 2>/dev/null)" ]; then
+    ok "resurrect save is fresh (<24h)"
+  else
+    note "resurrect save is >24h old — is continuum running? (tmux must be open for it to save)"
+  fi
+else
+  note "no resurrect save yet — one appears within 15min of using tmux"
+fi
 [ -d "${XDG_DATA_HOME:-$HOME/.local/share}/zinit/zinit.git" ] \
   && ok "zinit installed" \
   || bad "zinit missing — open a new shell to auto-install"
