@@ -26,6 +26,14 @@ font-thicken = true
 # Switch: bash install.sh --theme <name>  (default: catppuccin-mocha)
 config-file = theme-dotfiles.conf
 
+# ── Wallpaper (optional) ─────────────────────────────────
+# Parity with wezterm's background image: install.sh and the zsh
+# `wallpaper` command materialize wallpaper-dotfiles.conf from the
+# ~/.config/dotfiles-wallpaper pointer. The leading ? makes this
+# include optional — no snippet, plain background. Ghostty reloads
+# config with Cmd+Shift+, after a wallpaper switch.
+config-file = ?wallpaper-dotfiles.conf
+
 # ── Startup directory ────────────────────────────────────
 # Open new surfaces in ~/Desktop. zshrc handles the WSL→Windows path swap.
 working-directory = ~/Desktop

@@ -577,6 +577,26 @@ if [[ -f "$DOTFILES/ghostty/config" ]]; then
   else
     warn "ghostty/themes/$THEME.conf not found — theme include will be empty"
   fi
+
+  # Wallpaper parity with wezterm: materialize the optional include from
+  # the same ~/.config/dotfiles-wallpaper pointer. Low image opacity over
+  # the theme bg ≈ wezterm's dim + wash layering.
+  if [[ -s "$HOME/.config/dotfiles-wallpaper" ]]; then
+    WP_PATH="$(head -1 "$HOME/.config/dotfiles-wallpaper")"
+    if [[ -f "$WP_PATH" ]]; then
+      {
+        echo "background-image = $WP_PATH"
+        echo "background-image-opacity = 0.15"
+        echo "background-image-fit = cover"
+      } > "$GHOSTTY_DIR/wallpaper-dotfiles.conf"
+      success "Ghostty wallpaper → $(basename "$WP_PATH")"
+    else
+      rm -f "$GHOSTTY_DIR/wallpaper-dotfiles.conf"
+      warn "wallpaper pointer targets a missing file — ghostty wallpaper cleared"
+    fi
+  else
+    rm -f "$GHOSTTY_DIR/wallpaper-dotfiles.conf"
+  fi
 else
   warn "dotfiles/ghostty/config not found — skipping"
 fi

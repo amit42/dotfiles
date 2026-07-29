@@ -468,8 +468,9 @@ alias dotdoctor='bash ~/Desktop/dotfiles/dotfiles/doctor.sh'
 #   wallpaper           → fzf-pick from ~/.config/wallpapers
 #   wallpaper <path>    → use a specific image
 #   wallpaper off       → plain backgrounds everywhere
-# wezterm picks the change up immediately; running nvim instances need a
-# restart (the transparency check runs at startup).
+# wezterm picks the change up immediately; ghostty needs Cmd+Shift+, to
+# reload; running nvim instances need a restart (the transparency check
+# runs at startup).
 wallpaper() {
   local ptr="$HOME/.config/dotfiles-wallpaper"
   case "$1" in
@@ -491,6 +492,24 @@ wallpaper() {
       echo "wallpaper: ${1:t}"
       ;;
   esac
+
+  # Ghostty parity: rewrite the optional include (same values install.sh
+  # generates). Ghostty applies it on Cmd+Shift+, reload.
+  local gdir
+  if [[ "$OSTYPE" == darwin* ]]; then
+    gdir="$HOME/Library/Application Support/com.mitchellh.ghostty"
+  else
+    gdir="${XDG_CONFIG_HOME:-$HOME/.config}/ghostty"
+  fi
+  if [[ -d "$gdir" ]]; then
+    if [[ -s "$ptr" ]]; then
+      printf 'background-image = %s\nbackground-image-opacity = 0.15\nbackground-image-fit = cover\n' \
+        "$(head -1 "$ptr")" > "$gdir/wallpaper-dotfiles.conf"
+    else
+      command rm -f "$gdir/wallpaper-dotfiles.conf"
+    fi
+  fi
+
   # Nudge wezterm to re-evaluate its config (it doesn't watch the pointer)
   touch "$HOME/.wezterm.lua" 2>/dev/null
 }
