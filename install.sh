@@ -192,6 +192,15 @@ if [[ "$OS" == "mac" ]]; then
     install_brew_pkg lnav
     install_brew_pkg golangci-lint
     install_brew_pkg jq        # ais (Claude session picker) parses session JSONL with it
+    install_brew_pkg mpv       # terminal audio/video player (play/music functions)
+    install_brew_pkg yt-dlp    # youtube audio downloader (ytget)
+    if ! check_cmd clx; then   # hacker news TUI (alias: hn) — binary is clx, formula circumflex
+      log "Installing circumflex..."
+      brew install circumflex 2>/dev/null && success "Installed circumflex" \
+        || warn "Failed to install circumflex"
+    else
+      warn "circumflex already installed — skipping"
+    fi
     install_brew_pkg yazi          # terminal file manager (zshrc: ya = cd-on-quit wrapper)
     install_brew_pkg dust          # du replacement: sorted tree of disk usage with bars
     install_brew_pkg duf           # df replacement: colored table of mounts + free space
@@ -206,6 +215,23 @@ elif [[ "$OS" == "linux" ]] || [[ "$OS" == "wsl" ]]; then
   install_apt_pkg rg ripgrep
   install_apt_pkg lnav lnav
   install_apt_pkg jq jq      # ais (Claude session picker) parses session JSONL with it
+  install_apt_pkg mpv mpv    # terminal audio/video player (play/music functions)
+  # yt-dlp: apt's version is chronically stale and youtube breaks old
+  # versions constantly — install/refresh via pipx instead.
+  install_pipx_pkg yt-dlp
+  # circumflex (hacker news TUI, binary clx) — not in apt; Go install
+  if ! check_cmd clx; then
+    if check_cmd go; then
+      log "Installing circumflex via go..."
+      go install github.com/bensadeh/circumflex@latest 2>/dev/null \
+        && success "Installed circumflex" \
+        || warn "Failed to install circumflex via go"
+    else
+      warn "circumflex not installed — install go, then: go install github.com/bensadeh/circumflex@latest"
+    fi
+  else
+    warn "circumflex already installed — skipping"
+  fi
   install_apt_pkg duf duf
   # dust/procs aren't in Ubuntu's default repos under those names; the
   # packaged names differ by release, so install via cargo like eza/yazi.
@@ -543,6 +569,12 @@ if [[ -f "$DOTFILES/wezterm/wezterm.lua" ]]; then
   warn "Requires JetBrainsMono Nerd Font — download from https://www.nerdfonts.com"
 else
   warn "dotfiles/wezterm/wezterm.lua not found — skipping"
+fi
+
+# mpv — styled terminal player used by the play/music zsh functions
+# (mpv.conf + scripts/, incl. the pill-bar audio level indicator)
+if [[ -d "$DOTFILES/mpv" ]]; then
+  safe_copy "$DOTFILES/mpv" "$CONFIG/mpv"
 fi
 
 # Wallpapers — wezterm layers the image under a theme-bg wash.

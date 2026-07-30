@@ -615,6 +615,188 @@ rgf() {
 #        scratch json     → /tmp/scratch.json
 scratch() { nvim "/tmp/scratch.${1:-md}"; }
 
+# hn — Hacker News in the terminal (circumflex).
+# Inside: j/k move · Enter read comments · o open link in browser ·
+# Space add to favorites · f show favorites · q quit
+if command -v clx &>/dev/null; then
+  alias hn='clx'
+fi
+
+# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+# MUSIC — stream with mpv, remember what you played, playlists
+# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+# Nothing is downloaded. Storage is two flat TSV files (timestamp, url,
+# title) — deliberately NOT sqlite: hand-editable, git-syncable, zero
+# extra deps; revisit only if these ever hit thousands of rows.
+#   ~/.local/share/music/history.tsv    everything ever played (auto)
+#   ~/.local/share/music/playlist.tsv   the one curated playlist
+# mpv keys while playing: Space pause · ←/→ seek 5s · 9/0 volume ·
+# > / < next/prev in playlist · q quit
+MUSIC_DATA="${MUSIC_DATA:-$HOME/.local/share/music}"
+# migrate the pre-playlists layout (single history file) if present
+if [[ -f "$HOME/.local/share/music-history.tsv" && ! -f "$MUSIC_DATA/history.tsv" ]]; then
+  mkdir -p "$MUSIC_DATA"
+  command mv "$HOME/.local/share/music-history.tsv" "$MUSIC_DATA/history.tsv"
+fi
+
+# play / playv — stream (no download) and remember it in the history.
+#   play  <url | search words>       → audio only, stays in the terminal
+#   playv <url | search words>       → opens mpv's video window too
+#   play -l <url | search words>     → loop the track forever (q quits)
+#   play -z <url | search words>     → animated spectrum visualizer in
+#                                      the terminal (mpv lavfi → tct)
+# Flags combine: play -l -z … loops with the visualizer.
+# Takes a URL (youtube or anything yt-dlp supports) or search words.
+# Resolving the title costs ~1-2s before playback starts; if resolution
+# fails (offline, weird URL) it plays anyway and just skips the log.
+# (unalias first: the noglob aliases below would otherwise turn these
+# definitions into parse errors when the file is RE-sourced — same
+# zsh alias-expansion trap as tkill/tkillall.)
+unalias play playv ytget 2>/dev/null
+function _play_impl {
+  local mode="$1"; shift
+  local -a vflag lflag
+  [[ "$mode" == audio ]] && vflag=(--no-video)
+  while [[ "$1" == -* ]]; do
+    case "$1" in
+      -l|--loop) lflag+=(--loop-file=inf) ;;
+      -z|--viz)
+        # REMOVED: animated visualizers over terminal graphics protocols
+        # (kitty/sixel) stream ~30fps of escape codes through tmux and
+        # crashed WezTerm outright — static images (image.nvim) are fine,
+        # animation is not. Don't re-add without testing in a throwaway
+        # terminal first.
+        echo "the visualizer was removed — it crashed wezterm (see zshrc comment)" >&2
+        return 1
+        ;;
+      *) echo "unknown flag: $1" >&2; return 1 ;;
+    esac
+    shift
+  done
+  local plabel="play"; [[ "$mode" == video ]] && plabel="playv"
+  [[ $# -eq 0 ]] && { echo "Usage: $plabel [-l|-z] <url | search words>" >&2; return 1; }
+  local target="$1" line url title
+  [[ "$1" != http* ]] && target="ytsearch:$*"
+  line=$(yt-dlp --no-playlist --skip-download \
+           --print "%(webpage_url)s\t%(title)s" -- "$target" 2>/dev/null | head -1)
+  if [[ -z "$line" ]]; then
+    echo "couldn't resolve title — playing without logging" >&2
+    mpv "${vflag[@]}" "${lflag[@]}" "$1"
+    return
+  fi
+  url="${line%%$'\t'*}"; title="${line#*$'\t'}"
+  mkdir -p "$MUSIC_DATA"
+  printf '%s\t%s\t%s\n' "$(date +%s)" "$url" "$title" >> "$MUSIC_DATA/history.tsv"
+  print -P "%F{5}▶%f %F{6}${title//\%/%%}%f${lflag:+ %F{8}(looping)%f}"
+  mpv "${vflag[@]}" "${lflag[@]}" "$url"
+}
+function play  { _play_impl audio "$@" }
+function playv { _play_impl video "$@" }
+
+# URLs contain ? and & which zsh treats as glob characters — without
+# noglob, an unquoted youtube URL dies with "no matches found" before
+# the function even runs. The aliases make quoting unnecessary.
+alias play='noglob play'
+alias playv='noglob playv'
+
+# music / musicv — the player UI. musicv is the same but with mpv's
+# video window. Everything below picks by TITLE via fzf; Tab
+# multi-selects, Enter confirms, Esc backs out.
+#   music          pick from history → play
+#   music loop     pick from history → play on repeat (forever, q quits)
+#   music ls       print history (newest first, deduped)
+#   music all      shuffle-stream the whole history
+#   music add      pick from history → add to the playlist
+#   music del      pick from playlist → remove
+#   music show     print the playlist in play order
+#   music pl       play the playlist top to bottom
+#   music pl loop  play the playlist on repeat
+# The pill strip in mpv's status line (audio-reactive colors) comes from
+# the pillbar.lua mpv script — no external visualizer.
+function _music_impl {
+  local mode="$1"; shift
+  local -a vflag
+  [[ "$mode" == audio ]] && vflag=(--no-video)
+  local hist="$MUSIC_DATA/history.tsv" pl="$MUSIC_DATA/playlist.tsv"
+  local label="${mode/audio/music}"; label="${label/video/musicv}"
+
+  # newest first, dedupe by URL keeping the most recent listen
+  local dedup=""
+  [[ -s "$hist" ]] && dedup=$(sort -t$'\t' -k1,1 -rn "$hist" | awk -F'\t' '!seen[$2]++')
+
+  # picker helper: lines on stdin → picked lines (title column shown)
+  _mpick() { fzf --delimiter=$'\t' --with-nth=3 --multi \
+               --prompt="$1 ❯ " --height=60% --reverse }
+  # lines → urls (2nd column)
+  _murls() { local -a out; local x
+             for x in "$@"; do x="${x#*$'\t'}"; out+=("${x%%$'\t'*}"); done
+             print -l "${out[@]}" }
+
+  case "$1" in
+    ls)
+      [[ -z "$dedup" ]] && { print -P "%F{3}history is empty — play something first%f"; return 1; }
+      print -P "%F{4}history · $(echo "$dedup" | wc -l | tr -d ' ') tracks%f"
+      echo "$dedup" | awk -F'\t' '{printf "  \033[35m%2d\033[0m  %s\n", NR, $3}'
+      ;;
+    all)
+      [[ -z "$dedup" ]] && { print -P "%F{3}history is empty%f"; return 1; }
+      local -a urls; urls=("${(@f)$(echo "$dedup" | cut -f2)}")
+      mpv "${vflag[@]}" --shuffle "${urls[@]}"
+      ;;
+    loop|"")
+      [[ -z "$dedup" ]] && { print -P "%F{3}history is empty — play something first%f"; return 1; }
+      local -a lflag; [[ "$1" == loop ]] && lflag=(--loop-playlist=inf)
+      local -a picks
+      picks=("${(@f)$(echo "$dedup" | _mpick "$label${1:+ loop}")}") || return 0
+      [[ -z "$picks[1]" ]] && return 0
+      local -a urls; urls=("${(@f)$(_murls "${picks[@]}")}")
+      mpv "${vflag[@]}" "${lflag[@]}" "${urls[@]}"
+      ;;
+    add)
+      [[ -z "$dedup" ]] && { print -P "%F{3}history is empty — play something first%f"; return 1; }
+      local -a picks
+      picks=("${(@f)$(echo "$dedup" | _mpick 'add to playlist')}") || return 0
+      [[ -z "$picks[1]" ]] && return 0
+      mkdir -p "$MUSIC_DATA"; touch "$pl"
+      local p added=0
+      for p in "${picks[@]}"; do
+        local u="${${p#*$'\t'}%%$'\t'*}"
+        grep -qF "$u" "$pl" || { printf '%s\n' "$p" >> "$pl"; (( added++ )); }
+      done
+      print -P "%F{2}+ added $added track(s)%f (playlist: $(wc -l < "$pl" | tr -d ' '))"
+      ;;
+    del)
+      [[ -s "$pl" ]] || { print -P "%F{3}playlist is empty%f"; return 1; }
+      local -a picks
+      picks=("${(@f)$(< "$pl" _mpick 'remove from playlist')}") || return 0
+      [[ -z "$picks[1]" ]] && return 0
+      local t; t=$(mktemp)
+      print -l "${picks[@]}" | cut -f2 > "$t"
+      awk -F'\t' 'NR==FNR{ex[$0];next} !($2 in ex)' "$t" "$pl" > "$t.new" \
+        && command mv "$t.new" "$pl"; command rm -f "$t"
+      print -P "%F{1}- removed ${#picks} track(s)%f (playlist: $(wc -l < "$pl" | tr -d ' '))"
+      ;;
+    show)
+      [[ -s "$pl" ]] || { print -P "%F{3}playlist is empty — add with: music add%f"; return 1; }
+      print -P "%F{5}playlist · $(wc -l < "$pl" | tr -d ' ') tracks%f"
+      awk -F'\t' '{printf "  \033[35m%2d\033[0m  %s\n", NR, $3}' "$pl"
+      ;;
+    pl)
+      [[ -s "$pl" ]] || { print -P "%F{3}playlist is empty — add with: music add%f"; return 1; }
+      local -a lflag; [[ "$2" == loop ]] && lflag=(--loop-playlist=inf)
+      local -a urls; urls=("${(@f)$(cut -f2 "$pl")}")
+      print -P "%F{5}▶ playlist%f ($(wc -l < "$pl" | tr -d ' ') tracks${2:+, looping})"
+      mpv "${vflag[@]}" "${lflag[@]}" "${urls[@]}"
+      ;;
+    *)
+      print -P "%F{3}unknown: $1%f — try: music [loop|ls|all|add|del|show|pl [loop]]"
+      return 1
+      ;;
+  esac
+}
+function music  { _music_impl audio "$@" }
+function musicv { _music_impl video "$@" }
+
 # todo — open your global TODO file in nvim. Same file every time, so
 # tasks survive across machines (when this repo is synced).
 # Override location with `export TODO_FILE=~/notes/todo.md` in your env.
