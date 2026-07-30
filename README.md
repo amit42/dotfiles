@@ -33,6 +33,7 @@ Highlights:
 - [ZSH](#zsh)
 - [Workspace Sessions (ts)](#workspace-sessions-ts)
 - [AI Helpers](#ai-helpers)
+- [Music & News](#music--news)
 - [Tmux](#tmux)
 - [Neovim](#neovim)
 - [Starship](#starship)
@@ -111,6 +112,9 @@ the terminal's ANSI palette.
 | `thefuck` | Corrects your last command |
 | `jq` | JSON processor (powers the `ais` Claude session picker) |
 | `tree-sitter-cli` | Compiles nvim treesitter parsers (required on nvim 0.12+) |
+| `mpv` | terminal audio/video player (`play`, `music`) |
+| `yt-dlp` | YouTube stream resolution for `play` |
+| `circumflex` | Hacker News TUI (`hn`) |
 
 tmux plugins (TPM + sensible + resurrect + continuum) are installed
 headlessly — no manual `Prefix+I` needed. nvim plugins are pinned to
@@ -153,6 +157,9 @@ dotfiles/
 │   └── lua/user/
 │       ├── plugins/        ← one file per concern (telescope, git, dap, …)
 │       └── lsp/            ← LSP, completion, formatting
+├── mpv/
+│   ├── mpv.conf            ← player config (quiet startup, resume, 1080p cap)
+│   └── scripts/pillbar.lua ← audio-reactive status-line visualizer
 ├── wezterm/
 │   └── wezterm.lua         ← terminal emulator config
 ├── ghostty/
@@ -465,6 +472,48 @@ a no-op if `claude` isn't installed.
 terminal that resumes the project conversation; `<Space>ab` types an
 `@current-file` mention into its prompt, `<Space>as` (visual) mentions the
 selected line range.
+
+---
+
+## Music & News
+
+### Music — stream, remember, playlist (mpv + yt-dlp, nothing downloaded)
+
+`play` streams audio in the terminal and logs URL + title to a history
+file; `music` re-plays from that history. Storage is two flat TSV files
+under `~/.local/share/music/` — hand-editable, no database.
+
+| Command | What it does |
+|---------|-------------|
+| `play <url \| search words>` | stream audio (searches YouTube if not a URL) |
+| `playv …` | same, with mpv's video window (1080p cap) |
+| `play -l …` | loop the track forever |
+| `music` | fzf over everything played — Enter plays, Tab queues |
+| `music loop` | picked tracks on repeat |
+| `music ls` / `music all` | print history / shuffle-stream all of it |
+| `music add` / `music del` | curate the one global playlist (picked via fzf) |
+| `music show` | print the playlist in play order |
+| `music pl [loop]` | play the playlist top to bottom (optionally forever) |
+| `musicv …` | any of the above with video |
+
+**The status line** is a live visualizer (`mpv/scripts/pillbar.lua`):
+thin bars dancing to the music in the classic LED spectrum-analyzer
+palette (green base, amber mids, red peaks), split stereo — left half of
+the bars follows the left channel, right half the right. Loudness is
+measured inside mpv's own audio chain (ffmpeg `astats`), relative to the
+track's rolling baseline, with VU ballistics — instant attack, gentle
+decay. One line of plain ANSI text: no capture devices, no graphics
+protocols, terminal never taken over. `9`/`0` flash a `vol %` readout;
+pause freezes the bars.
+
+mpv keys: `Space` pause · `←/→` seek · `9/0` volume · `>` `<` next/prev
+in queue · `q` quit. Quit mid-track and it resumes on replay.
+
+### Hacker News
+
+`hn` opens [circumflex](https://github.com/bensadeh/circumflex): `j/k`
+move, `Enter` reads comments as clean pages, `o` opens in browser,
+`Space` favorites, `Tab` switches top/new/ask/show, `q` quits.
 
 ---
 
