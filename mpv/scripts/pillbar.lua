@@ -124,9 +124,18 @@ local function tick()
     vol_seg = fg(3) .. string.format("  vol %d%%", math.floor(vol + 0.5)) .. RESET
   end
 
+  -- loop indicator: ∞ when the track or playlist is set to repeat
+  -- (toggle live with L; A-B loops via l show as mpv's own (A-B) tag)
+  local loop_seg = ""
+  local lf = mp.get_property("loop-file")
+  local lp = mp.get_property("loop-playlist")
+  if (lf and lf ~= "no") or (lp and lp ~= "no") then
+    loop_seg = fg(6) .. " ∞" .. RESET
+  end
+
   -- no title here — it's printed once by play()/music and never changes
   mp.set_property("options/term-status-msg",
-    bar .. "  ${?pause==yes:⏸}${!pause==yes:▶} " ..
+    bar .. "  ${?pause==yes:⏸}${!pause==yes:▶}" .. loop_seg .. " " ..
     fg(TIME_COLOR) .. "${time-pos} / ${duration}" .. RESET .. vol_seg)
 end
 
