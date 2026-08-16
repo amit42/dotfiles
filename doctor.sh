@@ -28,7 +28,7 @@ fi
 
 # ── Core tools ─────────────────────────────────────────────
 hdr "Core tools"
-for cmd in nvim tmux fzf rg fd starship zoxide eza delta lazygit tree-sitter jq; do
+for cmd in nvim tmux fzf rg fd starship zoxide eza delta lazygit tree-sitter jq emacs; do
   if command -v "$cmd" &>/dev/null; then
     ok "$cmd"
   else

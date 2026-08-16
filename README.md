@@ -36,6 +36,7 @@ Highlights:
 - [Music & News](#music--news)
 - [Tmux](#tmux)
 - [Neovim](#neovim)
+- [Emacs](#emacs)
 - [Starship](#starship)
 - [WezTerm](#wezterm)
 - [Health Check](#health-check)
@@ -157,6 +158,9 @@ dotfiles/
 │   └── lua/user/
 │       ├── plugins/        ← one file per concern (telescope, git, dap, …)
 │       └── lsp/            ← LSP, completion, formatting
+├── emacs/
+│   ├── early-init.el       ← pre-GUI: chrome off, GC deferred
+│   └── init.el             ← evil + vertico/consult + eglot + magit + org
 ├── mpv/
 │   ├── mpv.conf            ← player config (quiet startup, resume, 1080p cap)
 │   └── scripts/pillbar.lua ← audio-reactive status-line visualizer
@@ -694,6 +698,35 @@ Full keymap reference: `nvim/KEYMAPS.md`
 | `Space+x` | close buffer |
 | `Ctrl+h/j/k/l` | move between splits |
 | `Ctrl+d / Ctrl+u` | smooth scroll down/up |
+
+---
+
+## Emacs
+
+Terminal-first Emacs (`em` = `emacs -nw`) built to mirror the nvim setup:
+**evil-mode with the same Space leader**, `jk` to escape, and the same
+theme — init.el reads `~/.config/dotfiles-theme` and maps each of the 9
+themes to its best Emacs port (catppuccin, doom-*, kanagawa; rose-pine
+and everforest approximate to the closest doom theme). Wallpaper
+transparency carries over in terminal frames too.
+
+Config: `emacs/init.el` → `~/.config/emacs/` (install.sh backs up any
+legacy `~/.emacs.d`, which would shadow it, and pre-warms all packages
+headlessly so first launch is instant).
+
+| nvim | emacs equivalent |
+|------|-----------------|
+| telescope | vertico + consult (`SPC t f/g/b/r//`) |
+| nvim-cmp | corfu + cape |
+| LSP/mason | eglot (same server binaries) |
+| gitsigns + fugitive | diff-hl + magit (`SPC g s`) |
+| lualine | doom-modeline |
+| treesitter | built-in treesit + treesit-auto |
+| Comment.nvim / surround | evil-commentary / evil-surround |
+
+**Org mode** is set up with `org-modern` styling and evil bindings:
+files in `~/org`, `SPC o a` agenda · `SPC o c` capture · `SPC o o` notes.
+TODO flow: `TODO → DOING → DONE` (done items get timestamped).
 
 ---
 

@@ -191,6 +191,7 @@ if [[ "$OS" == "mac" ]]; then
     install_brew_pkg tldr
     install_brew_pkg lnav
     install_brew_pkg golangci-lint
+    install_brew_pkg emacs     # terminal emacs (config in emacs/, evil + theme-synced)
     install_brew_pkg jq        # ais (Claude session picker) parses session JSONL with it
     install_brew_pkg mpv       # terminal audio/video player (play/music functions)
     install_brew_pkg yt-dlp    # youtube audio downloader (ytget)
@@ -214,6 +215,7 @@ elif [[ "$OS" == "linux" ]] || [[ "$OS" == "wsl" ]]; then
   install_apt_pkg fdfind fd-find
   install_apt_pkg rg ripgrep
   install_apt_pkg lnav lnav
+  install_apt_pkg emacs emacs-nox  # terminal emacs (config in emacs/)
   install_apt_pkg jq jq      # ais (Claude session picker) parses session JSONL with it
   install_apt_pkg mpv mpv    # terminal audio/video player (play/music functions)
   # yt-dlp: apt's version is chronically stale and youtube breaks old
@@ -458,6 +460,31 @@ if check_cmd nvim; then
 else
   warn "nvim not installed — skipping nvim config"
   warn "Install nvim then re-run this script"
+fi
+
+echo ""
+echo "── Emacs ─────────────────────────────────────────────"
+# Config lives at ~/.config/emacs (XDG). Emacs only honors it when
+# ~/.emacs.d is absent, so a leftover legacy dir gets backed up aside.
+if check_cmd emacs; then
+  if [[ -e "$HOME/.emacs.d" ]]; then
+    warn "Backing up legacy ~/.emacs.d → ~/.emacs.d.bak (it would shadow ~/.config/emacs)"
+    rm -rf "$HOME/.emacs.d.bak"
+    mv "$HOME/.emacs.d" "$HOME/.emacs.d.bak"
+  fi
+  safe_copy "$DOTFILES/emacs" "$CONFIG/emacs"
+  # Pre-warm packages headlessly so the first interactive launch is
+  # instant — same philosophy as the nvim lockfile restore. First ever
+  # run downloads ~35 packages (a few minutes); afterwards it's a no-op.
+  log "Bootstrapping emacs packages (first run can take minutes)..."
+  if emacs --batch --load "$CONFIG/emacs/early-init.el" \
+       --load "$CONFIG/emacs/init.el" >/dev/null 2>&1; then
+    success "Emacs packages ready"
+  else
+    warn "Emacs bootstrap reported errors — open emacs and check *Messages*"
+  fi
+else
+  warn "emacs not installed — skipping (brew install emacs / apt install emacs-nox)"
 fi
 
 # ══════════════════════════════════════════════════════════
