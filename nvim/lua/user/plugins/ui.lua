@@ -262,15 +262,42 @@ return {
         "nvim-tree/nvim-web-devicons",
       },
       config = function()
+        -- Slant separators are triangles colored like the editor bg to
+        -- blend in — with wallpaper transparency (autocommands.lua) that
+        -- bg is gone and they render as visible triangles. Same check as
+        -- the transparency autocmd: wallpaper on → thin separators.
+        local wallpaper = false
+        local f = io.open(vim.fn.expand("~/.config/dotfiles-wallpaper"), "r")
+        if f then
+          local p = (f:read("*l") or ""):gsub("%s+$", "")
+          f:close()
+          wallpaper = p ~= "" and vim.fn.filereadable(vim.fn.expand(p)) == 1
+        end
+
+        -- Pull colors from the ACTIVE colorscheme's groups so the active
+        -- tab styling follows all 9 themes with zero hardcoded hex:
+        --   accent = Function fg (the theme's primary accent)
+        --   surface = CursorLine bg (the theme's raised-surface tone)
+        local function hl(group, attr)
+          local h = vim.api.nvim_get_hl(0, { name = group, link = false })
+          return h[attr]
+        end
+        local accent  = hl("Function", "fg")
+        local surface = hl("CursorLine", "bg")
+        local normfg  = hl("Normal", "fg")
+        local dimfg   = hl("Comment", "fg")
+
         require("bufferline").setup({
           options = {
             mode = "buffers",             -- show buffers not tabs
-            separator_style = "slant",    -- slanted separators look nice
+            separator_style = wallpaper and "thin" or "slant",
             always_show_bufferline = true,
             show_buffer_close_icons = true,
             show_close_icon = false,
             color_icons = true,
             diagnostics = "nvim_lsp",     -- show LSP errors on buffer tabs
+            -- thick accent bar on the active tab's left edge
+            indicator = { icon = "▎", style = "icon" },
             offsets = {
               {
                 filetype = "NvimTree",    -- when file tree is open
@@ -279,6 +306,23 @@ return {
                 separator = true,
               },
             },
+          },
+          -- Active tab = solid surface pill + bold + accent marker;
+          -- inactive tabs recede into dim fg. Reads instantly, even
+          -- over a wallpaper-transparent background.
+          highlights = {
+            background         = { fg = dimfg },
+            buffer_selected    = { fg = normfg, bg = surface, bold = true, italic = false },
+            indicator_selected = { fg = accent, bg = surface },
+            close_button_selected = { bg = surface },
+            modified_selected  = { bg = surface },
+            duplicate_selected = { bg = surface, italic = true },
+            separator_selected = { bg = surface },
+            diagnostic_selected = { bg = surface },
+            error_selected     = { bg = surface, bold = true },
+            warning_selected   = { bg = surface, bold = true },
+            info_selected      = { bg = surface, bold = true },
+            hint_selected      = { bg = surface, bold = true },
           },
         })
       end,
