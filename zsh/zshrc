@@ -531,6 +531,8 @@ add-zsh-hook chpwd _auto_ls
 alias v='nvim'
 alias vi='nvim'
 alias vim='nvim'
+# emacs in the terminal (config: dotfiles/emacs — evil + theme-synced)
+alias em='emacs -nw'
 
 # zshedit — open the zshrc source file directly in nvim.
 # Points to the dotfiles source (not the deployed ~/.config copy)
@@ -675,6 +677,24 @@ function _play_impl {
   done
   local plabel="play"; [[ "$mode" == video ]] && plabel="playv"
   [[ $# -eq 0 ]] && { echo "Usage: $plabel [-l|-z] <url | search words>" >&2; return 1; }
+
+  # YouTube playlist URLs (anything with list=): play the WHOLE playlist —
+  # mpv's ytdl hook expands it into a queue; > and < skip tracks. A watch
+  # URL inside a playlist starts there and continues through the list.
+  # -l loops the entire playlist rather than one file.
+  if [[ "$1" == http* && "$1" == *"list="* ]]; then
+    local ptitle
+    ptitle=$(yt-dlp --flat-playlist --playlist-items 1 \
+               --print playlist_title -- "$1" 2>/dev/null | head -1)
+    (( ${#lflag} )) && lflag=(--loop-playlist=inf)
+    mkdir -p "$MUSIC_DATA"
+    printf '%s\t%s\t%s\n' "$(date +%s)" "$1" "[playlist] ${ptitle:-unknown}" \
+      >> "$MUSIC_DATA/history.tsv"
+    print -P "%F{5}▶%f %F{6}[playlist] ${${ptitle:-unknown}//\%/%%}%f${lflag:+ %F{8}(looping)%f}"
+    mpv "${vflag[@]}" "${lflag[@]}" "$1"
+    return
+  fi
+
   local target="$1" line url title
   [[ "$1" != http* ]] && target="ytsearch:$*"
   line=$(yt-dlp --no-playlist --skip-download \
@@ -1903,7 +1923,11 @@ if command -v claude &>/dev/null; then
       else
         when=$(date -r "$f" '+%d %b %H:%M')
       fi
-      title=$(jq -r 'select(.type=="summary") | .summary // empty' "$f" 2>/dev/null | tail -1)
+      # Title priority: manual rename (custom-title, last wins) → the
+      # auto-generated ai-title → conversation summary → first message
+      title=$(jq -r 'select(.type=="custom-title") | .customTitle // empty' "$f" 2>/dev/null | tail -1)
+      [[ -z "$title" ]] && title=$(jq -r 'select(.type=="ai-title") | .aiTitle // empty' "$f" 2>/dev/null | tail -1)
+      [[ -z "$title" ]] && title=$(jq -r 'select(.type=="summary") | .summary // empty' "$f" 2>/dev/null | tail -1)
       [[ -z "$title" ]] && title=$(jq -r '
           select(.type=="user") | .message.content
           | if type=="string" then . else ([.[]? | .text? // empty] | join(" ")) end
